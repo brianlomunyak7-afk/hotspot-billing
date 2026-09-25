@@ -172,9 +172,16 @@
       loadTenants();
     }
 
-    loadTenants();
+        loadTenants();
     loadPackages();
     loadTenantSelect();
+
+    document.querySelectorAll(".tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+            loadTenantSelect();
+            loadPackages();
+        });
+    });
   </script>
 </body>
 </html>
