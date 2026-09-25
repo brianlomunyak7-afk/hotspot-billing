@@ -1,8 +1,7 @@
 from sqlalchemy.orm import Session
-from models import Tenant, Package, Subscription, Payment
+from models import Tenant, Package, Subscription, Payment, PendingPayment
 from datetime import datetime, timedelta
 
-# --- TENANTS ---
 def get_tenants(db: Session):
     return db.query(Tenant).all()
 
@@ -22,9 +21,16 @@ def toggle_tenant(db: Session, tenant_id: int, status: bool):
     db.commit()
     return tenant
 
-# --- PACKAGES ---
+def delete_tenant(db: Session, tenant_id: int):
+    tenant = get_tenant(db, tenant_id)
+    db.delete(tenant)
+    db.commit()
+
 def get_packages(db: Session):
     return db.query(Package).all()
+
+def get_package(db: Session, package_id: int):
+    return db.query(Package).filter(Package.id == package_id).first()
 
 def create_package(db: Session, name: str, duration_days: int, price: float):
     pkg = Package(name=name, duration_days=duration_days, price=price)
@@ -33,7 +39,11 @@ def create_package(db: Session, name: str, duration_days: int, price: float):
     db.refresh(pkg)
     return pkg
 
-# --- SUBSCRIPTIONS ---
+def delete_package(db: Session, package_id: int):
+    pkg = get_package(db, package_id)
+    db.delete(pkg)
+    db.commit()
+
 def create_subscription(db: Session, tenant_id: int, package_id: int):
     pkg = db.query(Package).filter(Package.id == package_id).first()
     end_date = datetime.utcnow() + timedelta(days=pkg.duration_days)
@@ -66,7 +76,6 @@ def expire_subscriptions(db: Session):
     db.commit()
     return expired
 
-# --- PAYMENTS ---
 def create_payment(db: Session, tenant_id: int, amount: float, mpesa_code: str, subscription_id: int):
     payment = Payment(
         tenant_id=tenant_id,
@@ -78,3 +87,37 @@ def create_payment(db: Session, tenant_id: int, amount: float, mpesa_code: str, 
     db.commit()
     db.refresh(payment)
     return payment
+
+def create_pending_payment(db: Session, tenant_id: int, checkout_request_id: str, subscription_id: int, amount: float):
+    pending = PendingPayment(
+        tenant_id=tenant_id,
+        checkout_request_id=checkout_request_id,
+        subscription_id=subscription_id,
+        amount=amount,
+        status="pending"
+    )
+    db.add(pending)
+    db.commit()
+    db.refresh(pending)
+    return pending
+
+def get_payment_by_checkout(db: Session, checkout_request_id: str):
+    return db.query(PendingPayment).filter(PendingPayment.checkout_request_id == checkout_request_id).first()
+
+def confirm_payment(db: Session, checkout_request_id: str, mpesa_code: str):
+    pending = get_payment_by_checkout(db, checkout_request_id)
+    if pending:
+        pending.status = "confirmed"
+        pending.mpesa_code = mpesa_code
+        tenant = get_tenant(db, pending.tenant_id)
+        if tenant:
+            tenant.is_active = True
+        db.commit()
+    return pending
+
+def fail_payment(db: Session, checkout_request_id: str):
+    pending = get_payment_by_checkout(db, checkout_request_id)
+    if pending:
+        pending.status = "failed"
+        db.commit()
+    return pending
