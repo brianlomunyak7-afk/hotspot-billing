@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hotspot Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; }
+    nav { background: #1a1a2e; color: white; padding: 16px 24px; font-size: 20px; font-weight: bold; }
+    .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab { padding: 10px 20px; cursor: pointer; background: #ddd; border-radius: 6px; font-weight: bold; }
+    .tab.active { background: #1a1a2e; color: white; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    input, select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; width: 100%; margin-bottom: 10px; }
+    button { padding: 10px 20px; background: #1a1a2e; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    button.danger { background: #e74c3c; }
+    button.success { background: #27ae60; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #f9f9f9; font-weight: bold; }
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .badge.active { background: #d4edda; color: #155724; }
+    .badge.inactive { background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <nav>Hotspot Billing — Admin</nav>
+  <div class="container">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('tenants')">Tenants</div>
+      <div class="tab" onclick="switchTab('packages')">Packages</div>
+      <div class="tab" onclick="switchTab('payments')">Payments</div>
+    </div>
+
+    <div id="tenants" class="section active">
+      <div class="card">
+        <h3 style="margin-bottom:16px">Add Tenant</h3>
+        <input id="t-name" placeholder="Full Name" />
+        <input id="t-phone" placeholder="Phone (+2547XXXXXXXX)" />
+        <input id="t-router" placeholder="Router Name (e.g. Brian)" />
+        <button onclick="addTenant()">Add Tenant</button>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:16px">All Tenants</h3>
+        <table>
+          <thead><tr><th>Name</th><th>Phone</th><th>Router</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="tenant-list"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="packages" class="section">
+      <div class="card">
+        <h3 style="margin-bottom:16px">Add Package</h3>
+        <input id="p-name" placeholder="Package Name (e.g. Monthly)" />
+        <input id="p-days" placeholder="Duration (days)" type="number" />
+        <input id="p-price" placeholder="Price (KES)" type="number" />
+        <button onclick="addPackage()">Add Package</button>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:16px">All Packages</h3>
+        <table>
+          <thead><tr><th>Name</th><th>Duration</th><th>Price (KES)</th></tr></thead>
+          <tbody id="package-list"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="payments" class="section">
+      <div class="card">
+        <h3 style="margin-bottom:16px">Record Payment</h3>
+        <select id="pay-tenant"></select>
+        <select id="pay-package"></select>
+        <input id="pay-code" placeholder="M-Pesa Code (e.g. QAB1234XYZ)" />
+        <button onclick="recordPayment()">Record Payment</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = "http://127.0.0.1:8000";
+
+    function switchTab(name) {
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+      document.getElementById(name).classList.add("active");
+      event.target.classList.add("active");
+    }
+
+    async function loadTenants() {
+      const res = await fetch(`${API}/tenants/`);
+      const data = await res.json();
+      const tbody = document.getElementById("tenant-list");
+      tbody.innerHTML = "";
+      data.forEach(t => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${t.name}</td>
+            <td>${t.phone}</td>
+            <td>${t.router_name}</td>
+            <td><span class="badge ${t.is_active ? 'active' : 'inactive'}">${t.is_active ? 'Active' : 'Inactive'}</span></td>
+            <td>
+              <button class="${t.is_active ? 'danger' : 'success'}" onclick="toggleTenant(${t.id}, ${!t.is_active})">
+                ${t.is_active ? 'Disable' : 'Enable'}
+              </button>
+            </td>
+          </tr>`;
+      });
+    }
+
+    async function addTenant() {
+      const name = document.getElementById("t-name").value;
+      const phone = document.getElementById("t-phone").value;
+      const router_name = document.getElementById("t-router").value;
+      await fetch(`${API}/tenants/?name=${name}&phone=${phone}&router_name=${router_name}`, { method: "POST" });
+      loadTenants();
+    }
+
+    async function toggleTenant(id, status) {
+      await fetch(`${API}/tenants/${id}/toggle?status=${status}`, { method: "PUT" });
+      loadTenants();
+    }
+
+    async function loadPackages() {
+      const res = await fetch(`${API}/packages/`);
+      const data = await res.json();
+      const tbody = document.getElementById("package-list");
+      tbody.innerHTML = "";
+      const select = document.getElementById("pay-package");
+      select.innerHTML = "";
+      data.forEach(p => {
+        tbody.innerHTML += `<tr><td>${p.name}</td><td>${p.duration_days} days</td><td>KES ${p.price}</td></tr>`;
+        select.innerHTML += `<option value="${p.id}">${p.name} - KES ${p.price}</option>`;
+      });
+    }
+
+    async function addPackage() {
+      const name = document.getElementById("p-name").value;
+      const days = document.getElementById("p-days").value;
+      const price = document.getElementById("p-price").value;
+      await fetch(`${API}/packages/?name=${name}&duration_days=${days}&price=${price}`, { method: "POST" });
+      loadPackages();
+    }
+
+    async function loadTenantSelect() {
+      const res = await fetch(`${API}/tenants/`);
+      const data = await res.json();
+      const select = document.getElementById("pay-tenant");
+      select.innerHTML = "";
+      data.forEach(t => {
+        select.innerHTML += `<option value="${t.id}">${t.name}</option>`;
+      });
+    }
+
+    async function recordPayment() {
+      const tenant_id = document.getElementById("pay-tenant").value;
+      const package_id = document.getElementById("pay-package").value;
+      const mpesa_code = document.getElementById("pay-code").value;
+
+      const subRes = await fetch(`${API}/subscriptions/?tenant_id=${tenant_id}&package_id=${package_id}`, { method: "POST" });
+      const sub = await subRes.json();
+
+      const pkg = await fetch(`${API}/packages/`).then(r => r.json());
+      const selected = pkg.find(p => p.id == package_id);
+
+      await fetch(`${API}/payments/?tenant_id=${tenant_id}&amount=${selected.price}&mpesa_code=${mpesa_code}&subscription_id=${sub.id}`, { method: "POST" });
+
+      alert("Payment recorded and subscription activated.");
+      loadTenants();
+    }
+
+    loadTenants();
+    loadPackages();
+    loadTenantSelect();
+  </script>
+</body>
+</html>
