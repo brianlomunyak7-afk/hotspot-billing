@@ -8,7 +8,7 @@ import crud
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Hotspot Billing System")
+app = FastAPI(title="Phantech Billing System")
 
 app.add_middleware(
     CORSMiddleware,
