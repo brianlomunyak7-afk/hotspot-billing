@@ -15,75 +15,32 @@
     button { padding: 12px; background: #1a1a2e; color: white; border: none; border-radius: 8px; width: 100%; font-size: 15px; cursor: pointer; margin-bottom: 10px; }
     button.secondary { background: #eee; color: #333; }
     .package-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-    .package-item { border: 2px solid #eee; border-radius: 8px; padding: 14px; cursor: pointer; transition: 0.2s; }
-    .package-item:hover { border-color: #1a1a2e; }
+    .package-item { border: 2px solid #eee; border-radius: 8px; padding: 16px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
+    .package-item:hover { border-color: #1a1a2e; background: #f9f9ff; }
     .package-item.selected { border-color: #1a1a2e; background: #f0f0f8; }
-    .package-item h4 { margin-bottom: 4px; }
+    .package-item h4 { margin-bottom: 4px; font-size: 16px; }
     .package-item span { color: #888; font-size: 13px; }
+    .package-price { font-size: 18px; font-weight: bold; color: #1a1a2e; }
     .info-box { background: #f4f4f4; border-radius: 8px; padding: 14px; margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
-    .user-types { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
-    .type-btn { padding: 16px; border-radius: 10px; border: 2px solid #eee; background: white; color: #1a1a2e; font-size: 15px; font-weight: bold; cursor: pointer; text-align: left; width: 100%; }
-    .type-btn:hover { border-color: #1a1a2e; }
-    .type-btn span { display: block; font-size: 12px; color: #888; font-weight: normal; margin-top: 4px; }
+    .spinner { width: 80px; height: 80px; border: 6px solid #eee; border-top: 6px solid #1a1a2e; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
 <div class="card">
 
-  <div id="step-choose" class="step active">
+  <div id="step-packages" class="step active">
     <h2>Hotspot Portal</h2>
-    <p class="sub">How would you like to connect?</p>
-    <div class="user-types">
-      <button class="type-btn" onclick="goTo('step-walkin')">
-        Quick Access
-        <span>Pay and browse instantly — no account needed</span>
-      </button>
-      <button class="type-btn" onclick="goTo('step-tenant')">
-        Home Tenant
-        <span>Register or renew your monthly subscription</span>
-      </button>
-    </div>
-  </div>
-
-  <div id="step-walkin" class="step">
-    <h2>Quick Access</h2>
-    <p class="sub">Enter your phone to receive M-Pesa prompt</p>
-    <input id="walkin-phone" placeholder="Phone Number (07XXXXXXXX)" />
-    <button onclick="walkinContinue()">Select Package</button>
-    <button class="secondary" onclick="goTo('step-choose')">Back</button>
-  </div>
-
-  <div id="step-tenant" class="step">
-    <h2>Home Tenant</h2>
-    <p class="sub">New here? Register. Already a tenant? Renew.</p>
-    <input id="tenant-phone" placeholder="Phone Number (07XXXXXXXX)" />
-    <button onclick="findTenant()">Continue</button>
-    <button class="secondary" onclick="goTo('step-choose')">Back</button>
-  </div>
-
-  <div id="step-register" class="step">
-    <h2>Register</h2>
-    <p class="sub">First time? Create your account</p>
-    <input id="reg-name" placeholder="Full Name" />
-    <input id="reg-phone" placeholder="Phone Number (07XXXXXXXX)" readonly />
-    <input id="reg-router" placeholder="Your Location (e.g. House 4, Block B)" />
-    <button onclick="registerTenant()">Register & Continue</button>
-    <button class="secondary" onclick="goTo('step-tenant')">Back</button>
-  </div>
-
-  <div id="step-packages" class="step">
-    <h2>Choose a Package</h2>
-    <p class="sub">Select a plan that works for you</p>
+    <p class="sub">Select a package to get started</p>
     <div class="package-list" id="package-list"></div>
-    <button onclick="proceedToPayment()">Pay Now</button>
-    <button class="secondary" onclick="goTo('step-choose')">Back</button>
   </div>
 
-  <div id="step-payment" class="step">
-    <h2>Confirm Payment</h2>
-    <p class="sub">M-Pesa STK Push will be sent to your phone</p>
-    <div class="info-box" id="payment-summary"></div>
-    <button onclick="sendSTK()">Send M-Pesa Prompt</button>
+  <div id="step-phone" class="step">
+    <h2>Enter Your Number</h2>
+    <p class="sub">We'll send an M-Pesa prompt to this number</p>
+    <div class="info-box" id="selected-package-summary"></div>
+    <input id="phone" placeholder="Phone Number (07XXXXXXXX)" type="tel" />
+    <button onclick="proceedToPayment()">Confirm & Pay</button>
     <button class="secondary" onclick="goTo('step-packages')">Back</button>
   </div>
 
@@ -91,14 +48,14 @@
     <h2>Waiting for Payment</h2>
     <p class="sub">Check your phone and enter your M-Pesa PIN</p>
     <div style="text-align:center; margin: 30px 0;">
-      <div id="countdown" style="font-size:40px; font-weight:bold; color:#1a1a2e;">60</div>
-      <p style="color:#888; margin-top:8px;">seconds remaining</p>
+      <div class="spinner"></div>
+      <p id="countdown-text" style="color:#888; margin-top:20px; font-size:13px;">waiting... <span id="countdown">60</span>s</p>
     </div>
     <button class="secondary" onclick="goTo('step-packages')">Cancel</button>
   </div>
 
   <div id="step-success" class="step">
-    <div style="text-align:center; font-size:60px; margin-bottom:16px;">✓</div>
+    <div style="text-align:center; font-size:64px; margin-bottom:16px;">✓</div>
     <h2>You're Online!</h2>
     <p class="sub">Payment confirmed</p>
     <div class="info-box" id="success-summary"></div>
@@ -106,7 +63,7 @@
   </div>
 
   <div id="step-error" class="step">
-    <div style="text-align:center; font-size:60px; margin-bottom:16px;">✗</div>
+    <div style="text-align:center; font-size:64px; margin-bottom:16px;">✗</div>
     <h2>Payment Failed</h2>
     <p class="sub" id="error-msg">Something went wrong. Please try again.</p>
     <button onclick="goTo('step-packages')">Try Again</button>
@@ -116,10 +73,9 @@
 
 <script>
   const API = "http://127.0.0.1:8000";
-  let currentTenant = null;
   let selectedPackage = null;
+  let currentTenant = null;
   let countdownTimer = null;
-  let isWalkin = false;
 
   function goTo(stepId) {
     document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
@@ -133,97 +89,65 @@
     return phone;
   }
 
-  function walkinContinue() {
-    const phone = document.getElementById("walkin-phone").value.trim();
-    if (!phone) { alert("Enter your phone number."); return; }
-    isWalkin = true;
-    currentTenant = { phone: formatPhone(phone), name: "Walk-in", id: null };
-    loadPackages();
-  }
-
-  async function findTenant() {
-    const raw = document.getElementById("tenant-phone").value.trim();
-    const phone = formatPhone(raw);
-    if (!phone) { alert("Enter your phone number."); return; }
-    isWalkin = false;
-    const res = await fetch(`${API}/tenants/`);
-    const tenants = await res.json();
-    const found = tenants.find(t => t.phone === phone || t.phone === raw);
-    if (found) {
-      currentTenant = found;
-      loadPackages();
-    } else {
-      document.getElementById("reg-phone").value = raw;
-      goTo("step-register");
-    }
-  }
-
-  async function registerTenant() {
-    const name = document.getElementById("reg-name").value.trim();
-    const phone = formatPhone(document.getElementById("reg-phone").value.trim());
-    const router = document.getElementById("reg-router").value.trim();
-    if (!name || !router) { alert("Fill in all fields."); return; }
-    const res = await fetch(`${API}/tenants/?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&router_name=${encodeURIComponent(router)}`, { method: "POST" });
-    currentTenant = await res.json();
-    loadPackages();
-  }
-
   async function loadPackages() {
     const res = await fetch(`${API}/packages/`);
     const packages = await res.json();
     const list = document.getElementById("package-list");
     list.innerHTML = "";
-    selectedPackage = null;
     packages.forEach(p => {
       const div = document.createElement("div");
       div.className = "package-item";
-      div.innerHTML = `<h4>${p.name}</h4><span>${p.duration_days} days &mdash; KES ${p.price}</span>`;
+      div.innerHTML = `
+        <div>
+          <h4>${p.name}</h4>
+          <span>${p.duration_days} day(s)</span>
+        </div>
+        <div class="package-price">KES ${p.price}</div>
+      `;
       div.onclick = () => {
-        document.querySelectorAll(".package-item").forEach(i => i.classList.remove("selected"));
-        div.classList.add("selected");
         selectedPackage = p;
+        document.getElementById("selected-package-summary").innerHTML = `
+          <b>Package:</b> ${p.name}<br>
+          <b>Duration:</b> ${p.duration_days} day(s)<br>
+          <b>Amount:</b> KES ${p.price}
+        `;
+        goTo("step-phone");
       };
       list.appendChild(div);
     });
-    goTo("step-packages");
   }
 
-  function proceedToPayment() {
-    if (!selectedPackage) { alert("Please select a package."); return; }
-    document.getElementById("payment-summary").innerHTML = `
-      <b>Phone:</b> ${currentTenant.phone}<br>
-      <b>Package:</b> ${selectedPackage.name}<br>
-      <b>Duration:</b> ${selectedPackage.duration_days} days<br>
-      <b>Amount:</b> KES ${selectedPackage.price}
-    `;
-    goTo("step-payment");
-  }
+  async function proceedToPayment() {
+    const raw = document.getElementById("phone").value.trim();
+    if (!raw) { alert("Enter your phone number."); return; }
+    const phone = formatPhone(raw);
 
-  async function sendSTK() {
+    const res = await fetch(`${API}/tenants/`);
+    const tenants = await res.json();
+    const found = tenants.find(t => t.phone === phone || t.phone === raw);
+
+    if (found) {
+      currentTenant = found;
+    } else {
+      const reg = await fetch(`${API}/tenants/?name=Guest&phone=${phone}&router_name=walkin`, { method: "POST" });
+      currentTenant = await reg.json();
+    }
+
     goTo("step-waiting");
     startCountdown();
 
-    let tenantId = currentTenant.id;
-
-    if (isWalkin || !tenantId) {
-      const res = await fetch(`${API}/tenants/?name=Walk-in&phone=${currentTenant.phone}&router_name=walkin`, { method: "POST" });
-      const t = await res.json();
-      tenantId = t.id;
-      currentTenant.id = tenantId;
-    }
-
-    const res = await fetch(`${API}/payments/stk-push`, {
+    const stkRes = await fetch(`${API}/payments/stk-push`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        tenant_id: tenantId,
+        tenant_id: currentTenant.id,
         package_id: selectedPackage.id,
         phone: currentTenant.phone,
         amount: selectedPackage.price
       })
     });
 
-    const data = await res.json();
+    const data = await stkRes.json();
 
     if (data.checkout_request_id) {
       pollPaymentStatus(data.checkout_request_id);
@@ -259,7 +183,7 @@
         clearInterval(countdownTimer);
         document.getElementById("success-summary").innerHTML = `
           <b>Package:</b> ${selectedPackage.name}<br>
-          <b>Duration:</b> ${selectedPackage.duration_days} days<br>
+          <b>Duration:</b> ${selectedPackage.duration_days} day(s)<br>
           <b>Amount Paid:</b> KES ${selectedPackage.price}<br>
           <b>M-Pesa Code:</b> ${data.mpesa_code}
         `;
@@ -273,6 +197,8 @@
       }
     }, 5000);
   }
+
+  loadPackages();
 </script>
 </body>
 </html>
