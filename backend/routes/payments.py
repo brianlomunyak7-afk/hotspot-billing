@@ -8,6 +8,7 @@ import base64
 import os
 from datetime import datetime
 from dotenv import load_dotenv
+from models import PendingPayment
 
 load_dotenv()
 
@@ -104,3 +105,18 @@ def payment_status(checkout_request_id: str, db: Session = Depends(get_db)):
     if not payment:
         return {"status": "pending"}
     return {"status": payment.status, "mpesa_code": payment.mpesa_code}
+
+@router.get("/all")
+def all_payments(db: Session = Depends(get_db)):
+    payments = db.query(PendingPayment).all()
+    result = []
+    for p in payments:
+        tenant = crud.get_tenant(db, p.tenant_id)
+        result.append({
+            "tenant_name": tenant.name if tenant else "Unknown",
+            "amount": p.amount,
+            "mpesa_code": p.mpesa_code,
+            "status": p.status,
+            "created_at": p.created_at
+        })
+    return result

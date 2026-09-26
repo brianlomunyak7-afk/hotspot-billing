@@ -11,44 +11,65 @@
     p.sub { text-align: center; color: #888; margin-bottom: 24px; font-size: 14px; }
     .step { display: none; }
     .step.active { display: block; }
-    input, select { padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; width: 100%; margin-bottom: 14px; font-size: 15px; }
+    input { padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; width: 100%; margin-bottom: 14px; font-size: 15px; }
     button { padding: 12px; background: #1a1a2e; color: white; border: none; border-radius: 8px; width: 100%; font-size: 15px; cursor: pointer; margin-bottom: 10px; }
     button.secondary { background: #eee; color: #333; }
+    button.outline { background: white; color: #1a1a2e; border: 2px solid #1a1a2e; }
     .package-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
     .package-item { border: 2px solid #eee; border-radius: 8px; padding: 14px; cursor: pointer; transition: 0.2s; }
     .package-item:hover { border-color: #1a1a2e; }
     .package-item.selected { border-color: #1a1a2e; background: #f0f0f8; }
     .package-item h4 { margin-bottom: 4px; }
     .package-item span { color: #888; font-size: 13px; }
-    .success-icon { text-align: center; font-size: 60px; margin-bottom: 16px; }
     .info-box { background: #f4f4f4; border-radius: 8px; padding: 14px; margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
-    .tab-btn { flex: 1; padding: 10px; border: 2px solid #1a1a2e; border-radius: 8px; background: white; color: #1a1a2e; font-weight: bold; cursor: pointer; }
-    .tab-btn.active { background: #1a1a2e; color: white; }
+    .user-types { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+    .type-btn { padding: 16px; border-radius: 10px; border: 2px solid #eee; background: white; color: #1a1a2e; font-size: 15px; font-weight: bold; cursor: pointer; text-align: left; }
+    .type-btn:hover { border-color: #1a1a2e; }
+    .type-btn span { display: block; font-size: 12px; color: #888; font-weight: normal; margin-top: 4px; }
   </style>
 </head>
 <body>
 <div class="card">
 
-  <div id="step-welcome" class="step active">
+  <div id="step-choose" class="step active">
     <h2>Hotspot Portal</h2>
-    <p class="sub">Get online in seconds</p>
-    <div class="tabs">
-      <button class="tab-btn active" onclick="selectType('new')">New User</button>
-      <button class="tab-btn" onclick="selectType('returning')">Returning User</button>
+    <p class="sub">How would you like to connect?</p>
+    <div class="user-types">
+      <button class="type-btn" onclick="goTo('step-walkin')">
+        Quick Access
+        <span>Pay and browse instantly — no account needed</span>
+      </button>
+      <button class="type-btn" onclick="goTo('step-tenant')">
+        Home Tenant
+        <span>Register or renew your monthly subscription</span>
+      </button>
     </div>
+  </div>
 
-    <div id="new-user-form">
-      <input id="reg-name" placeholder="Full Name" />
-      <input id="reg-phone" placeholder="Phone Number (+2547XXXXXXXX)" />
-      <input id="reg-router" placeholder="Router / Location (e.g. Room 4, Cyber)" />
-      <button onclick="registerUser()">Continue</button>
-    </div>
+  <div id="step-walkin" class="step">
+    <h2>Quick Access</h2>
+    <p class="sub">Enter your phone to receive M-Pesa prompt</p>
+    <input id="walkin-phone" placeholder="Phone Number (07XXXXXXXX)" />
+    <button onclick="walkinContinue()">Select Package</button>
+    <button class="secondary" onclick="goTo('step-choose')">Back</button>
+  </div>
 
-    <div id="returning-user-form" style="display:none;">
-      <input id="ret-phone" placeholder="Phone Number (+2547XXXXXXXX)" />
-      <button onclick="findUser()">Find My Account</button>
-    </div>
+  <div id="step-tenant" class="step">
+    <h2>Home Tenant</h2>
+    <p class="sub">New here? Register. Already a tenant? Renew.</p>
+    <input id="tenant-phone" placeholder="Phone Number (07XXXXXXXX)" />
+    <button onclick="findTenant()">Continue</button>
+    <button class="secondary" onclick="goTo('step-choose')">Back</button>
+  </div>
+
+  <div id="step-register" class="step">
+    <h2>Register</h2>
+    <p class="sub">First time? Create your account</p>
+    <input id="reg-name" placeholder="Full Name" />
+    <input id="reg-phone" placeholder="Phone Number (07XXXXXXXX)" readonly />
+    <input id="reg-router" placeholder="Your Location (e.g. House 4, Block B)" />
+    <button onclick="registerTenant()">Register & Continue</button>
+    <button class="secondary" onclick="goTo('step-tenant')">Back</button>
   </div>
 
   <div id="step-packages" class="step">
@@ -56,7 +77,7 @@
     <p class="sub">Select a plan that works for you</p>
     <div class="package-list" id="package-list"></div>
     <button onclick="proceedToPayment()">Pay Now</button>
-    <button class="secondary" onclick="goTo('step-welcome')">Back</button>
+    <button class="secondary" onclick="goTo('step-choose')">Back</button>
   </div>
 
   <div id="step-payment" class="step">
@@ -71,14 +92,14 @@
     <h2>Waiting for Payment</h2>
     <p class="sub">Check your phone and enter your M-Pesa PIN</p>
     <div style="text-align:center; margin: 30px 0;">
-      <div id="countdown" style="font-size:40px; font-weight:bold; color:#1a1a2e;">60</div>
+      <div id="countdown" style="font-size:40px; font-weight:bold; color:#1a1a2e;">120</div>
       <p style="color:#888; margin-top:8px;">seconds remaining</p>
     </div>
     <button class="secondary" onclick="goTo('step-packages')">Cancel</button>
   </div>
 
   <div id="step-success" class="step">
-    <div class="success-icon">✓</div>
+    <div style="text-align:center; font-size:60px; margin-bottom:16px;">✓</div>
     <h2>You're Online!</h2>
     <p class="sub">Payment confirmed</p>
     <div class="info-box" id="success-summary"></div>
@@ -99,45 +120,52 @@
   let currentTenant = null;
   let selectedPackage = null;
   let countdownTimer = null;
+  let isWalkin = false;
 
   function goTo(stepId) {
     document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
     document.getElementById(stepId).classList.add("active");
   }
 
-  function selectType(type) {
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    event.target.classList.add("active");
-    document.getElementById("new-user-form").style.display = type === "new" ? "block" : "none";
-    document.getElementById("returning-user-form").style.display = type === "returning" ? "block" : "none";
+  function walkinContinue() {
+    const phone = document.getElementById("walkin-phone").value.trim();
+    if (!phone) { alert("Enter your phone number."); return; }
+    isWalkin = true;
+    currentTenant = { phone: formatPhone(phone), name: "Walk-in", id: null };
+    loadPackages();
   }
 
-  async function registerUser() {
-    const name = document.getElementById("reg-name").value.trim();
-    const phone = document.getElementById("reg-phone").value.trim();
-    const router = document.getElementById("reg-router").value.trim();
-
-    if (!name || !phone || !router) {
-      alert("Please fill in all fields.");
-      return;
+  async function findTenant() {
+    const phone = formatPhone(document.getElementById("tenant-phone").value.trim());
+    if (!phone) { alert("Enter your phone number."); return; }
+    isWalkin = false;
+    const res = await fetch(`${API}/tenants/`);
+    const tenants = await res.json();
+    const found = tenants.find(t => t.phone === phone || t.phone === document.getElementById("tenant-phone").value.trim());
+    if (found) {
+      currentTenant = found;
+      loadPackages();
+    } else {
+      document.getElementById("reg-phone").value = document.getElementById("tenant-phone").value.trim();
+      goTo("step-register");
     }
+  }
 
+  async function registerTenant() {
+    const name = document.getElementById("reg-name").value.trim();
+    const phone = formatPhone(document.getElementById("reg-phone").value.trim());
+    const router = document.getElementById("reg-router").value.trim();
+    if (!name || !router) { alert("Fill in all fields."); return; }
     const res = await fetch(`${API}/tenants/?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&router_name=${encodeURIComponent(router)}`, { method: "POST" });
     currentTenant = await res.json();
     loadPackages();
   }
 
-  async function findUser() {
-    const phone = document.getElementById("ret-phone").value.trim();
-    const res = await fetch(`${API}/tenants/`);
-    const tenants = await res.json();
-    currentTenant = tenants.find(t => t.phone === phone);
-
-    if (!currentTenant) {
-      alert("Phone number not found. Please register as a new user.");
-      return;
-    }
-    loadPackages();
+  function formatPhone(phone) {
+    phone = phone.trim();
+    if (phone.startsWith("0")) return "254" + phone.slice(1);
+    if (phone.startsWith("+")) return phone.slice(1);
+    return phone;
   }
 
   async function loadPackages() {
@@ -145,6 +173,7 @@
     const packages = await res.json();
     const list = document.getElementById("package-list");
     list.innerHTML = "";
+    selectedPackage = null;
     packages.forEach(p => {
       const div = document.createElement("div");
       div.className = "package-item";
@@ -160,12 +189,8 @@
   }
 
   function proceedToPayment() {
-    if (!selectedPackage) {
-      alert("Please select a package.");
-      return;
-    }
+    if (!selectedPackage) { alert("Please select a package."); return; }
     document.getElementById("payment-summary").innerHTML = `
-      <b>Name:</b> ${currentTenant.name}<br>
       <b>Phone:</b> ${currentTenant.phone}<br>
       <b>Package:</b> ${selectedPackage.name}<br>
       <b>Duration:</b> ${selectedPackage.duration_days} days<br>
@@ -178,11 +203,20 @@
     goTo("step-waiting");
     startCountdown();
 
+    let tenantId = currentTenant.id;
+
+    if (isWalkin || !tenantId) {
+      const res = await fetch(`${API}/tenants/?name=Walk-in&phone=${currentTenant.phone}&router_name=walkin`, { method: "POST" });
+      const t = await res.json();
+      tenantId = t.id;
+      currentTenant.id = tenantId;
+    }
+
     const res = await fetch(`${API}/payments/stk-push`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        tenant_id: currentTenant.id,
+        tenant_id: tenantId,
         package_id: selectedPackage.id,
         phone: currentTenant.phone,
         amount: selectedPackage.price
@@ -192,7 +226,7 @@
     const data = await res.json();
 
     if (data.checkout_request_id) {
-      pollPaymentStatus(data.checkout_request_id, data.subscription_id);
+      pollPaymentStatus(data.checkout_request_id);
     } else {
       clearInterval(countdownTimer);
       document.getElementById("error-msg").textContent = data.detail || "STK Push failed.";
@@ -201,26 +235,25 @@
   }
 
   function startCountdown() {
-    let seconds = 60;
+    let seconds = 120;
     document.getElementById("countdown").textContent = seconds;
     countdownTimer = setInterval(() => {
       seconds--;
       document.getElementById("countdown").textContent = seconds;
       if (seconds <= 0) {
         clearInterval(countdownTimer);
-        goTo("step-error");
         document.getElementById("error-msg").textContent = "Payment timed out. Please try again.";
+        goTo("step-error");
       }
     }, 1000);
   }
 
-  async function pollPaymentStatus(checkoutRequestId, subscriptionId) {
+  async function pollPaymentStatus(checkoutRequestId) {
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts++;
       const res = await fetch(`${API}/payments/status/${checkoutRequestId}`);
       const data = await res.json();
-
       if (data.status === "confirmed") {
         clearInterval(interval);
         clearInterval(countdownTimer);
@@ -232,8 +265,7 @@
         `;
         goTo("step-success");
       }
-
-      if (data.status === "failed" || attempts >= 12) {
+      if (data.status === "failed" || attempts >= 24) {
         clearInterval(interval);
         clearInterval(countdownTimer);
         document.getElementById("error-msg").textContent = "Payment not confirmed. Try again.";

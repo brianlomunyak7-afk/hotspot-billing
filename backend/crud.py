@@ -121,3 +121,12 @@ def fail_payment(db: Session, checkout_request_id: str):
         pending.status = "failed"
         db.commit()
     return pending
+
+def update_package(db: Session, package_id: int, name: str, duration_days: int, price: float):
+    pkg = get_package(db, package_id)
+    pkg.name = name
+    pkg.duration_days = duration_days
+    pkg.price = price
+    db.commit()
+    db.refresh(pkg)
+    return pkg
