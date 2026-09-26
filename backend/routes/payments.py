@@ -49,7 +49,7 @@ def stk_push(data: STKRequest, db: Session = Depends(get_db)):
     shortcode = os.getenv("MPESA_SHORTCODE")
     callback_url = os.getenv("CALLBACK_URL")
     phone = data.phone.strip()
-    if phone.startswitch("0"):
+    if phone.startswith("0"):
         phone = "254" + phone[1:]
     elif phone.startswith("+"):
         phonr = phone[1:]

@@ -14,7 +14,6 @@
     input { padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; width: 100%; margin-bottom: 14px; font-size: 15px; }
     button { padding: 12px; background: #1a1a2e; color: white; border: none; border-radius: 8px; width: 100%; font-size: 15px; cursor: pointer; margin-bottom: 10px; }
     button.secondary { background: #eee; color: #333; }
-    button.outline { background: white; color: #1a1a2e; border: 2px solid #1a1a2e; }
     .package-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
     .package-item { border: 2px solid #eee; border-radius: 8px; padding: 14px; cursor: pointer; transition: 0.2s; }
     .package-item:hover { border-color: #1a1a2e; }
@@ -23,7 +22,7 @@
     .package-item span { color: #888; font-size: 13px; }
     .info-box { background: #f4f4f4; border-radius: 8px; padding: 14px; margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
     .user-types { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
-    .type-btn { padding: 16px; border-radius: 10px; border: 2px solid #eee; background: white; color: #1a1a2e; font-size: 15px; font-weight: bold; cursor: pointer; text-align: left; }
+    .type-btn { padding: 16px; border-radius: 10px; border: 2px solid #eee; background: white; color: #1a1a2e; font-size: 15px; font-weight: bold; cursor: pointer; text-align: left; width: 100%; }
     .type-btn:hover { border-color: #1a1a2e; }
     .type-btn span { display: block; font-size: 12px; color: #888; font-weight: normal; margin-top: 4px; }
   </style>
@@ -92,7 +91,7 @@
     <h2>Waiting for Payment</h2>
     <p class="sub">Check your phone and enter your M-Pesa PIN</p>
     <div style="text-align:center; margin: 30px 0;">
-      <div id="countdown" style="font-size:40px; font-weight:bold; color:#1a1a2e;">120</div>
+      <div id="countdown" style="font-size:40px; font-weight:bold; color:#1a1a2e;">60</div>
       <p style="color:#888; margin-top:8px;">seconds remaining</p>
     </div>
     <button class="secondary" onclick="goTo('step-packages')">Cancel</button>
@@ -127,6 +126,13 @@
     document.getElementById(stepId).classList.add("active");
   }
 
+  function formatPhone(phone) {
+    phone = phone.trim();
+    if (phone.startsWith("0")) return "254" + phone.slice(1);
+    if (phone.startsWith("+")) return phone.slice(1);
+    return phone;
+  }
+
   function walkinContinue() {
     const phone = document.getElementById("walkin-phone").value.trim();
     if (!phone) { alert("Enter your phone number."); return; }
@@ -136,17 +142,18 @@
   }
 
   async function findTenant() {
-    const phone = formatPhone(document.getElementById("tenant-phone").value.trim());
+    const raw = document.getElementById("tenant-phone").value.trim();
+    const phone = formatPhone(raw);
     if (!phone) { alert("Enter your phone number."); return; }
     isWalkin = false;
     const res = await fetch(`${API}/tenants/`);
     const tenants = await res.json();
-    const found = tenants.find(t => t.phone === phone || t.phone === document.getElementById("tenant-phone").value.trim());
+    const found = tenants.find(t => t.phone === phone || t.phone === raw);
     if (found) {
       currentTenant = found;
       loadPackages();
     } else {
-      document.getElementById("reg-phone").value = document.getElementById("tenant-phone").value.trim();
+      document.getElementById("reg-phone").value = raw;
       goTo("step-register");
     }
   }
@@ -159,13 +166,6 @@
     const res = await fetch(`${API}/tenants/?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&router_name=${encodeURIComponent(router)}`, { method: "POST" });
     currentTenant = await res.json();
     loadPackages();
-  }
-
-  function formatPhone(phone) {
-    phone = phone.trim();
-    if (phone.startsWith("0")) return "254" + phone.slice(1);
-    if (phone.startsWith("+")) return phone.slice(1);
-    return phone;
   }
 
   async function loadPackages() {
@@ -235,7 +235,7 @@
   }
 
   function startCountdown() {
-    let seconds = 120;
+    let seconds = 60;
     document.getElementById("countdown").textContent = seconds;
     countdownTimer = setInterval(() => {
       seconds--;
@@ -265,7 +265,7 @@
         `;
         goTo("step-success");
       }
-      if (data.status === "failed" || attempts >= 24) {
+      if (data.status === "failed" || attempts >= 12) {
         clearInterval(interval);
         clearInterval(countdownTimer);
         document.getElementById("error-msg").textContent = "Payment not confirmed. Try again.";
