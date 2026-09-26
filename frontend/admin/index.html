@@ -166,25 +166,32 @@
     }
 
     async function loadTenants() {
-      const res = await fetch(`${API}/tenants/`);
-      const data = await res.json();
-      const tbody = document.getElementById("tenant-list");
-      tbody.innerHTML = "";
-      data.forEach(t => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${t.name}</td>
-            <td>${t.phone}</td>
-            <td>${t.router_name}</td>
-            <td><span class="badge ${t.is_active ? 'active' : 'inactive'}">${t.is_active ? 'Active' : 'Inactive'}</span></td>
-            <td>
-              <button class="${t.is_active ? 'danger' : ''} small" onclick="toggleTenant(${t.id}, ${!t.is_active})">
-                ${t.is_active ? 'Disable' : 'Enable'}
-              </button>
-            </td>
-          </tr>`;
-      });
-    }
+  const res = await fetch(`${API}/tenants/`);
+  const data = await res.json();
+  const tbody = document.getElementById("tenant-list");
+  tbody.innerHTML = "";
+  data.forEach(t => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${t.name}</td>
+        <td>${t.phone}</td>
+        <td>${t.router_name}</td>
+        <td><span class="badge ${t.is_active ? 'active' : 'inactive'}">${t.is_active ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <button class="${t.is_active ? 'danger' : ''} small" onclick="toggleTenant(${t.id}, ${!t.is_active})">
+            ${t.is_active ? 'Disable' : 'Enable'}
+          </button>
+          <button class="danger small" onclick="deleteTenant(${t.id})">Delete</button>
+        </td>
+      </tr>`;
+  });
+}
+
+async function deleteTenant(id) {
+  if (!confirm("Delete this tenant?")) return;
+  await fetch(`${API}/tenants/${id}`, { method: "DELETE" });
+  loadTenants();
+}
 
     async function toggleTenant(id, status) {
       await fetch(`${API}/tenants/${id}/toggle?status=${status}`, { method: "PUT" });
