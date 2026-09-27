@@ -76,17 +76,22 @@ def expire_subscriptions(db: Session):
     db.commit()
     return expired
 
-def create_payment(db: Session, tenant_id: int, amount: float, mpesa_code: str, subscription_id: int):
-    payment = Payment(
-        tenant_id=tenant_id,
-        amount=amount,
-        mpesa_code=mpesa_code,
-        subscription_id=subscription_id
-    )
-    db.add(payment)
+def create_package(db: Session, name: str, duration_days: int, price: float, duration_type: str = "days"):
+    pkg = Package(name=name, duration_days=duration_days, price=price, duration_type=duration_type)
+    db.add(pkg)
     db.commit()
-    db.refresh(payment)
-    return payment
+    db.refresh(pkg)
+    return pkg
+
+def update_package(db: Session, package_id: int, name: str, duration_days: int, price: float, duration_type: str = "days"):
+    pkg = get_package(db, package_id)
+    pkg.name = name
+    pkg.duration_days = duration_days
+    pkg.price = price
+    pkg.duration_type = duration_type
+    db.commit()
+    db.refresh(pkg)
+    return pkg
 
 def create_pending_payment(db: Session, tenant_id: int, checkout_request_id: str, subscription_id: int, amount: float):
     pending = PendingPayment(
