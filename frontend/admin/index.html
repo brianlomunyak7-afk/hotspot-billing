@@ -14,7 +14,10 @@
     .section { display: none; }
     .section.active { display: block; }
     .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-    input { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; width: 100%; margin-bottom: 10px; }
+    input, select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; width: 100%; margin-bottom: 10px; }
+    .duration-row { display: flex; gap: 10px; }
+    .duration-row select { width: 140px; flex-shrink: 0; }
+    .duration-row input { flex: 1; }
     button { padding: 10px 20px; background: #1a1a2e; color: white; border: none; border-radius: 6px; cursor: pointer; }
     button.danger { background: #e74c3c; }
     button.warning { background: #f39c12; }
@@ -44,8 +47,14 @@
     <div id="packages" class="section active">
       <div class="card">
         <h3 style="margin-bottom:16px">Add Package</h3>
-        <input id="p-name" placeholder="Package Name (e.g. Weekly)" />
-        <input id="p-days" placeholder="Duration (days)" type="number" />
+        <input id="p-name" placeholder="Package Name (e.g. 15 Minutes, Monthly)" />
+        <div class="duration-row">
+          <select id="p-type" onchange="updateDurationRange()">
+            <option value="minutes">Minutes</option>
+            <option value="days" selected>Days</option>
+          </select>
+          <input id="p-duration" placeholder="Duration" type="number" min="1" max="30" />
+        </div>
         <input id="p-price" placeholder="Price (KES)" type="number" />
         <button onclick="addPackage()">Add Package</button>
       </div>
@@ -83,7 +92,13 @@
     <div class="modal-box">
       <h3>Edit Package</h3>
       <input id="edit-name" placeholder="Package Name" />
-      <input id="edit-days" placeholder="Duration (days)" type="number" />
+      <div class="duration-row">
+        <select id="edit-type" onchange="updateEditDurationRange()">
+          <option value="minutes">Minutes</option>
+          <option value="days">Days</option>
+        </select>
+        <input id="edit-duration" placeholder="Duration" type="number" min="1" max="30" />
+      </div>
       <input id="edit-price" placeholder="Price (KES)" type="number" />
       <input type="hidden" id="edit-id" />
       <div class="modal-actions">
@@ -95,6 +110,20 @@
 
   <script>
     const API = "http://127.0.0.1:8000";
+
+    function updateDurationRange() {
+      const type = document.getElementById("p-type").value;
+      const input = document.getElementById("p-duration");
+      input.max = type === "minutes" ? 60 : 30;
+      input.placeholder = type === "minutes" ? "1 - 60" : "1 - 30";
+      input.value = "";
+    }
+
+    function updateEditDurationRange() {
+      const type = document.getElementById("edit-type").value;
+      const input = document.getElementById("edit-duration");
+      input.max = type === "minutes" ? 60 : 30;
+    }
 
     function switchTab(name, el) {
       document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
@@ -112,13 +141,14 @@
       const tbody = document.getElementById("package-list");
       tbody.innerHTML = "";
       data.forEach(p => {
+        const durLabel = p.duration_type === "minutes" ? `${p.duration_days} min` : `${p.duration_days} days`;
         tbody.innerHTML += `
           <tr>
             <td>${p.name}</td>
-            <td>${p.duration_days} days</td>
+            <td>${durLabel}</td>
             <td>KES ${p.price}</td>
             <td>
-              <button class="warning small" onclick="openEdit(${p.id}, '${p.name}', ${p.duration_days}, ${p.price})">Edit</button>
+              <button class="warning small" onclick="openEdit(${p.id}, '${p.name}', ${p.duration_days}, ${p.price}, '${p.duration_type}')">Edit</button>
               <button class="danger small" onclick="deletePackage(${p.id})">Delete</button>
             </td>
           </tr>`;
@@ -127,12 +157,13 @@
 
     async function addPackage() {
       const name = document.getElementById("p-name").value;
-      const days = document.getElementById("p-days").value;
+      const duration = document.getElementById("p-duration").value;
       const price = document.getElementById("p-price").value;
-      if (!name || !days || !price) { alert("Fill in all fields."); return; }
-      await fetch(`${API}/packages/?name=${name}&duration_days=${days}&price=${price}`, { method: "POST" });
+      const type = document.getElementById("p-type").value;
+      if (!name || !duration || !price) { alert("Fill in all fields."); return; }
+      await fetch(`${API}/packages/?name=${name}&duration_days=${duration}&price=${price}&duration_type=${type}`, { method: "POST" });
       document.getElementById("p-name").value = "";
-      document.getElementById("p-days").value = "";
+      document.getElementById("p-duration").value = "";
       document.getElementById("p-price").value = "";
       loadPackages();
     }
@@ -143,11 +174,12 @@
       loadPackages();
     }
 
-    function openEdit(id, name, days, price) {
+    function openEdit(id, name, duration, price, type) {
       document.getElementById("edit-id").value = id;
       document.getElementById("edit-name").value = name;
-      document.getElementById("edit-days").value = days;
+      document.getElementById("edit-duration").value = duration;
       document.getElementById("edit-price").value = price;
+      document.getElementById("edit-type").value = type;
       document.getElementById("edit-modal").classList.add("open");
     }
 
@@ -158,43 +190,44 @@
     async function saveEdit() {
       const id = document.getElementById("edit-id").value;
       const name = document.getElementById("edit-name").value;
-      const days = document.getElementById("edit-days").value;
+      const duration = document.getElementById("edit-duration").value;
       const price = document.getElementById("edit-price").value;
-      await fetch(`${API}/packages/${id}?name=${name}&duration_days=${days}&price=${price}`, { method: "PUT" });
+      const type = document.getElementById("edit-type").value;
+      await fetch(`${API}/packages/${id}?name=${name}&duration_days=${duration}&price=${price}&duration_type=${type}`, { method: "PUT" });
       closeModal();
       loadPackages();
     }
 
     async function loadTenants() {
-  const res = await fetch(`${API}/tenants/`);
-  const data = await res.json();
-  const tbody = document.getElementById("tenant-list");
-  tbody.innerHTML = "";
-  data.forEach(t => {
-    tbody.innerHTML += `
-      <tr>
-        <td>${t.name}</td>
-        <td>${t.phone}</td>
-        <td>${t.router_name}</td>
-        <td><span class="badge ${t.is_active ? 'active' : 'inactive'}">${t.is_active ? 'Active' : 'Inactive'}</span></td>
-        <td>
-          <button class="${t.is_active ? 'danger' : ''} small" onclick="toggleTenant(${t.id}, ${!t.is_active})">
-            ${t.is_active ? 'Disable' : 'Enable'}
-          </button>
-          <button class="danger small" onclick="deleteTenant(${t.id})">Delete</button>
-        </td>
-      </tr>`;
-  });
-}
-
-async function deleteTenant(id) {
-  if (!confirm("Delete this tenant?")) return;
-  await fetch(`${API}/tenants/${id}`, { method: "DELETE" });
-  loadTenants();
-}
+      const res = await fetch(`${API}/tenants/`);
+      const data = await res.json();
+      const tbody = document.getElementById("tenant-list");
+      tbody.innerHTML = "";
+      data.forEach(t => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${t.name}</td>
+            <td>${t.phone}</td>
+            <td>${t.router_name}</td>
+            <td><span class="badge ${t.is_active ? 'active' : 'inactive'}">${t.is_active ? 'Active' : 'Inactive'}</span></td>
+            <td>
+              <button class="${t.is_active ? 'danger' : ''} small" onclick="toggleTenant(${t.id}, ${!t.is_active})">
+                ${t.is_active ? 'Disable' : 'Enable'}
+              </button>
+              <button class="danger small" onclick="deleteTenant(${t.id})">Delete</button>
+            </td>
+          </tr>`;
+      });
+    }
 
     async function toggleTenant(id, status) {
       await fetch(`${API}/tenants/${id}/toggle?status=${status}`, { method: "PUT" });
+      loadTenants();
+    }
+
+    async function deleteTenant(id) {
+      if (!confirm("Delete this tenant?")) return;
+      await fetch(`${API}/tenants/${id}`, { method: "DELETE" });
       loadTenants();
     }
 
