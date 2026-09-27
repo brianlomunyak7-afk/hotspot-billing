@@ -135,3 +135,12 @@ def update_package(db: Session, package_id: int, name: str, duration_days: int, 
     db.commit()
     db.refresh(pkg)
     return pkg
+
+def cleanup_stale_payments(db: Session, minutes: int = 3):
+    cutoff = datetime.utcnow() - timedelta(minutes=minutes)
+    deleted = db.query(PendingPayment).filter(
+        PendingPayment.status.in_(["pending", "failed"]),
+        PendingPayment.created_at < cutoff
+    ).delete(synchronize_session=False)
+    db.commit()
+    return deleted

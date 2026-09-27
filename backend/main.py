@@ -44,3 +44,17 @@ def daily_check():
 @app.get("/")
 def root():
     return {"message": "Hotspot Billing System Running"}
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(daily_check, 'interval', hours=24)
+
+def cleanup_payments_job():
+    db = SessionLocal()
+    try:
+        deleted = crud.cleanup_stale_payments(db, minutes=3)
+        print(f"Cleanup: removed {deleted} stale pending/failed payments")
+    finally:
+        db.close()
+
+scheduler.add_job(cleanup_payments_job, 'interval', minutes=3)
+scheduler.start()
