@@ -18,9 +18,10 @@ class Package(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     duration_days = Column(Integer, nullable=False)
+    duration_type = Column(String, default="days")
     price = Column(Float, nullable=False)
     subscriptions = relationship("Subscription", back_populates="package")
-
+    
 class Subscription(Base):
     __tablename__ = "subscriptions"
     id = Column(Integer, primary_key=True, index=True)
