@@ -10,6 +10,7 @@ class Tenant(Base):
     phone = Column(String, nullable=False)
     router_name = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
+    hotspot_password = Column(String, nullable=True)   # <-- ADD THIS
     created_at = Column(DateTime, default=datetime.utcnow)
     subscriptions = relationship("Subscription", back_populates="tenant")
 
@@ -21,7 +22,7 @@ class Package(Base):
     duration_type = Column(String, default="days")
     price = Column(Float, nullable=False)
     subscriptions = relationship("Subscription", back_populates="package")
-    
+
 class Subscription(Base):
     __tablename__ = "subscriptions"
     id = Column(Integer, primary_key=True, index=True)

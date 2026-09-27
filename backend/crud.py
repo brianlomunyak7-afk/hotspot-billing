@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from models import Tenant, Package, Subscription, Payment, PendingPayment
 from datetime import datetime, timedelta
+import secrets
 
 def get_tenants(db: Session):
     return db.query(Tenant).all()
@@ -9,7 +10,12 @@ def get_tenant(db: Session, tenant_id: int):
     return db.query(Tenant).filter(Tenant.id == tenant_id).first()
 
 def create_tenant(db: Session, name: str, phone: str, router_name: str):
-    tenant = Tenant(name=name, phone=phone, router_name=router_name)
+    tenant = Tenant(
+        name=name,
+        phone=phone,
+        router_name=router_name,
+        hotspot_password=secrets.token_hex(4)  # random 8-char password
+    )
     db.add(tenant)
     db.commit()
     db.refresh(tenant)
