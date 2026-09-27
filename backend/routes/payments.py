@@ -84,21 +84,27 @@ def stk_push(data: STKRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=result.get("errorMessage", "STK Push failed"))
 
 @router.post("/callback")
+@router.post("/callback")
 def mpesa_callback(payload: dict, db: Session = Depends(get_db)):
+    print("=== CALLBACK RECEIVED ===")
+    print(payload)
     try:
         body = payload["Body"]["stkCallback"]
         checkout_id = body["CheckoutRequestID"]
         result_code = body["ResultCode"]
+        print(f"checkout_id={checkout_id} result_code={result_code}")
         if result_code == 0:
             items = body["CallbackMetadata"]["Item"]
             mpesa_code = next(i["Value"] for i in items if i["Name"] == "MpesaReceiptNumber")
-            crud.confirm_payment(db, checkout_id, mpesa_code)
+            updated = crud.confirm_payment(db, checkout_id, mpesa_code)
+            print(f"confirm_payment result: {updated}")
         else:
-            crud.fail_payment(db, checkout_id)
-    except Exception:
-        pass
+            updated = crud.fail_payment(db, checkout_id)
+            print(f"fail_payment result: {updated}")
+    except Exception as e:
+        print(f"CALLBACK ERROR: {e}")
     return {"ResultCode": 0, "ResultDesc": "Accepted"}
-
+    
 @router.get("/status/{checkout_request_id}")
 def payment_status(checkout_request_id: str, db: Session = Depends(get_db)):
     payment = crud.get_payment_by_checkout(db, checkout_request_id)
