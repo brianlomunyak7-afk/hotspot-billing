@@ -6,7 +6,8 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; background: #f4f4f4; }
-    nav { background: #1a1a2e; color: white; padding: 16px 24px; font-size: 20px; font-weight: bold; }
+    nav { background: #1a1a2e; color: white; padding: 16px 24px; font-size: 20px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+    nav button { width: auto; padding: 8px 16px; font-size: 13px; }
     .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
     .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
     .tab { padding: 10px 20px; cursor: pointer; background: #ddd; border-radius: 6px; font-weight: bold; }
@@ -33,83 +34,154 @@
     .modal-box { background: white; border-radius: 10px; padding: 28px; width: 100%; max-width: 400px; }
     .modal-box h3 { margin-bottom: 16px; }
     .modal-actions { display: flex; gap: 10px; margin-top: 10px; }
+
+    /* Login screen */
+    #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #1a1a2e; }
+    #login-box { background: white; border-radius: 12px; padding: 32px; width: 100%; max-width: 380px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    #login-box h2 { text-align: center; margin-bottom: 20px; color: #1a1a2e; }
+    #login-error { color: #e74c3c; font-size: 13px; text-align: center; margin-bottom: 10px; min-height: 18px; }
+    #admin-app { display: none; }
   </style>
 </head>
 <body>
-  <nav>Phantech — Admin</nav>
-  <div class="container">
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab('packages', this)">Packages</div>
-      <div class="tab" onclick="switchTab('tenants', this)">Tenants</div>
-      <div class="tab" onclick="switchTab('payments', this)">Payments</div>
-    </div>
 
-    <div id="packages" class="section active">
-      <div class="card">
-        <h3 style="margin-bottom:16px">Add Package</h3>
-        <input id="p-name" placeholder="Package Name (e.g. 15 Minutes, Monthly)" />
-        <div class="duration-row">
-          <select id="p-type" onchange="updateDurationRange()">
-            <option value="minutes">Minutes</option>
-            <option value="days" selected>Days</option>
-          </select>
-          <input id="p-duration" placeholder="Duration" type="number" min="1" max="30" />
-        </div>
-        <input id="p-price" placeholder="Price (KES)" type="number" />
-        <button onclick="addPackage()">Add Package</button>
-      </div>
-      <div class="card">
-        <h3 style="margin-bottom:16px">All Packages</h3>
-        <table>
-          <thead><tr><th>Name</th><th>Duration</th><th>Price (KES)</th><th>Actions</th></tr></thead>
-          <tbody id="package-list"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div id="tenants" class="section">
-      <div class="card">
-        <h3 style="margin-bottom:16px">All Tenants</h3>
-        <table>
-          <thead><tr><th>Name</th><th>Phone</th><th>Router</th><th>Status</th><th>Action</th></tr></thead>
-          <tbody id="tenant-list"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div id="payments" class="section">
-      <div class="card">
-        <h3 style="margin-bottom:16px">All Payments</h3>
-        <table>
-          <thead><tr><th>Tenant</th><th>Amount</th><th>M-Pesa Code</th><th>Status</th><th>Date</th></tr></thead>
-          <tbody id="payment-list"></tbody>
-        </table>
-      </div>
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen">
+    <div id="login-box">
+      <h2>Phantech Admin</h2>
+      <div id="login-error"></div>
+      <input id="login-username" placeholder="Username" autocomplete="username" />
+      <input id="login-password" placeholder="Password" type="password" autocomplete="current-password" />
+      <button onclick="login()">Login</button>
     </div>
   </div>
 
-  <div class="modal" id="edit-modal">
-    <div class="modal-box">
-      <h3>Edit Package</h3>
-      <input id="edit-name" placeholder="Package Name" />
-      <div class="duration-row">
-        <select id="edit-type" onchange="updateEditDurationRange()">
-          <option value="minutes">Minutes</option>
-          <option value="days">Days</option>
-        </select>
-        <input id="edit-duration" placeholder="Duration" type="number" min="1" max="30" />
+  <!-- ADMIN APP (hidden until logged in) -->
+  <div id="admin-app">
+    <nav>
+      <span>Phantech — Admin</span>
+      <button onclick="logout()">Logout</button>
+    </nav>
+    <div class="container">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('packages', this)">Packages</div>
+        <div class="tab" onclick="switchTab('tenants', this)">Tenants</div>
+        <div class="tab" onclick="switchTab('payments', this)">Payments</div>
       </div>
-      <input id="edit-price" placeholder="Price (KES)" type="number" />
-      <input type="hidden" id="edit-id" />
-      <div class="modal-actions">
-        <button onclick="saveEdit()">Save</button>
-        <button class="danger" onclick="closeModal()">Cancel</button>
+
+      <div id="packages" class="section active">
+        <div class="card">
+          <h3 style="margin-bottom:16px">Add Package</h3>
+          <input id="p-name" placeholder="Package Name (e.g. 15 Minutes, Monthly)" />
+          <div class="duration-row">
+            <select id="p-type" onchange="updateDurationRange()">
+              <option value="minutes">Minutes</option>
+              <option value="days" selected>Days</option>
+            </select>
+            <input id="p-duration" placeholder="Duration" type="number" min="1" max="30" />
+          </div>
+          <input id="p-price" placeholder="Price (KES)" type="number" />
+          <button onclick="addPackage()">Add Package</button>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:16px">All Packages</h3>
+          <table>
+            <thead><tr><th>Name</th><th>Duration</th><th>Price (KES)</th><th>Actions</th></tr></thead>
+            <tbody id="package-list"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tenants" class="section">
+        <div class="card">
+          <h3 style="margin-bottom:16px">All Tenants</h3>
+          <table>
+            <thead><tr><th>Name</th><th>Phone</th><th>Router</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="tenant-list"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="payments" class="section">
+        <div class="card">
+          <h3 style="margin-bottom:16px">All Payments</h3>
+          <table>
+            <thead><tr><th>Tenant</th><th>Amount</th><th>M-Pesa Code</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody id="payment-list"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="edit-modal">
+      <div class="modal-box">
+        <h3>Edit Package</h3>
+        <input id="edit-name" placeholder="Package Name" />
+        <div class="duration-row">
+          <select id="edit-type" onchange="updateEditDurationRange()">
+            <option value="minutes">Minutes</option>
+            <option value="days">Days</option>
+          </select>
+          <input id="edit-duration" placeholder="Duration" type="number" min="1" max="30" />
+        </div>
+        <input id="edit-price" placeholder="Price (KES)" type="number" />
+        <input type="hidden" id="edit-id" />
+        <div class="modal-actions">
+          <button onclick="saveEdit()">Save</button>
+          <button class="danger" onclick="closeModal()">Cancel</button>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
     const API = "http://127.0.0.1:8000";
+    let token = null; // kept in memory only, never in localStorage
+
+    function authHeaders(extra = {}) {
+      return { ...extra, "Authorization": `Bearer ${token}` };
+    }
+
+    async function login() {
+      const username = document.getElementById("login-username").value;
+      const password = document.getElementById("login-password").value;
+      const errorEl = document.getElementById("login-error");
+      errorEl.textContent = "";
+
+      if (!username || !password) {
+        errorEl.textContent = "Enter username and password.";
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+
+        if (!res.ok) {
+          errorEl.textContent = "Invalid username or password.";
+          return;
+        }
+
+        const data = await res.json();
+        token = data.token;
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("admin-app").style.display = "block";
+        loadPackages();
+      } catch (e) {
+        errorEl.textContent = "Could not reach server. Is the backend running?";
+      }
+    }
+
+    function logout() {
+      token = null;
+      document.getElementById("admin-app").style.display = "none";
+      document.getElementById("login-screen").style.display = "flex";
+      document.getElementById("login-username").value = "";
+      document.getElementById("login-password").value = "";
+    }
 
     function updateDurationRange() {
       const type = document.getElementById("p-type").value;
@@ -133,6 +205,15 @@
       if (name === "tenants") loadTenants();
       if (name === "packages") loadPackages();
       if (name === "payments") loadPayments();
+    }
+
+    function handleAuthError(res) {
+      if (res.status === 401) {
+        alert("Session expired. Please log in again.");
+        logout();
+        return true;
+      }
+      return false;
     }
 
     async function loadPackages() {
@@ -161,7 +242,11 @@
       const price = document.getElementById("p-price").value;
       const type = document.getElementById("p-type").value;
       if (!name || !duration || !price) { alert("Fill in all fields."); return; }
-      await fetch(`${API}/packages/?name=${name}&duration_days=${duration}&price=${price}&duration_type=${type}`, { method: "POST" });
+      const res = await fetch(`${API}/packages/?name=${encodeURIComponent(name)}&duration_days=${duration}&price=${price}&duration_type=${type}`, {
+        method: "POST",
+        headers: authHeaders()
+      });
+      if (handleAuthError(res)) return;
       document.getElementById("p-name").value = "";
       document.getElementById("p-duration").value = "";
       document.getElementById("p-price").value = "";
@@ -170,7 +255,8 @@
 
     async function deletePackage(id) {
       if (!confirm("Delete this package?")) return;
-      await fetch(`${API}/packages/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API}/packages/${id}`, { method: "DELETE", headers: authHeaders() });
+      if (handleAuthError(res)) return;
       loadPackages();
     }
 
@@ -193,7 +279,11 @@
       const duration = document.getElementById("edit-duration").value;
       const price = document.getElementById("edit-price").value;
       const type = document.getElementById("edit-type").value;
-      await fetch(`${API}/packages/${id}?name=${name}&duration_days=${duration}&price=${price}&duration_type=${type}`, { method: "PUT" });
+      const res = await fetch(`${API}/packages/${id}?name=${encodeURIComponent(name)}&duration_days=${duration}&price=${price}&duration_type=${type}`, {
+        method: "PUT",
+        headers: authHeaders()
+      });
+      if (handleAuthError(res)) return;
       closeModal();
       loadPackages();
     }
@@ -221,18 +311,21 @@
     }
 
     async function toggleTenant(id, status) {
-      await fetch(`${API}/tenants/${id}/toggle?status=${status}`, { method: "PUT" });
+      const res = await fetch(`${API}/tenants/${id}/toggle?status=${status}`, { method: "PUT", headers: authHeaders() });
+      if (handleAuthError(res)) return;
       loadTenants();
     }
 
     async function deleteTenant(id) {
       if (!confirm("Delete this tenant?")) return;
-      await fetch(`${API}/tenants/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API}/tenants/${id}`, { method: "DELETE", headers: authHeaders() });
+      if (handleAuthError(res)) return;
       loadTenants();
     }
 
     async function loadPayments() {
-      const res = await fetch(`${API}/payments/all`);
+      const res = await fetch(`${API}/payments/all`, { headers: authHeaders() });
+      if (handleAuthError(res)) return;
       const data = await res.json();
       const tbody = document.getElementById("payment-list");
       tbody.innerHTML = "";
@@ -247,8 +340,6 @@
           </tr>`;
       });
     }
-
-    loadPackages();
   </script>
 </body>
 </html>

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from pydantic import BaseModel
+from routes.auth import verify_token
 import crud
 import requests
 import base64
@@ -38,10 +39,13 @@ def generate_password():
     password = base64.b64encode(raw.encode()).decode()
     return password, timestamp
 
+# LOCKED — manual payment recording is an admin-only action
 @router.post("/")
-def record_payment(tenant_id: int, amount: float, mpesa_code: str, subscription_id: int, db: Session = Depends(get_db)):
+def record_payment(tenant_id: int, amount: float, mpesa_code: str, subscription_id: int,
+                    db: Session = Depends(get_db), token: str = Depends(verify_token)):
     return crud.create_payment(db, tenant_id, amount, mpesa_code, subscription_id)
 
+# OPEN — the client portal triggers this to start a payment
 @router.post("/stk-push")
 def stk_push(data: STKRequest, db: Session = Depends(get_db)):
     token = get_mpesa_token()
@@ -52,7 +56,7 @@ def stk_push(data: STKRequest, db: Session = Depends(get_db)):
     if phone.startswith("0"):
         phone = "254" + phone[1:]
     elif phone.startswith("+"):
-        phonr = phone[1:]
+        phone = phone[1:]
 
     payload = {
         "BusinessShortCode": shortcode,
@@ -83,7 +87,7 @@ def stk_push(data: STKRequest, db: Session = Depends(get_db)):
     else:
         raise HTTPException(status_code=400, detail=result.get("errorMessage", "STK Push failed"))
 
-@router.post("/callback")
+# OPEN — Safaricom's servers call this directly, it can't carry your admin token
 @router.post("/callback")
 def mpesa_callback(payload: dict, db: Session = Depends(get_db)):
     print("=== CALLBACK RECEIVED ===")
@@ -104,7 +108,8 @@ def mpesa_callback(payload: dict, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"CALLBACK ERROR: {e}")
     return {"ResultCode": 0, "ResultDesc": "Accepted"}
-    
+
+# OPEN — the client portal polls this while waiting for payment confirmation
 @router.get("/status/{checkout_request_id}")
 def payment_status(checkout_request_id: str, db: Session = Depends(get_db)):
     payment = crud.get_payment_by_checkout(db, checkout_request_id)
@@ -112,8 +117,9 @@ def payment_status(checkout_request_id: str, db: Session = Depends(get_db)):
         return {"status": "pending"}
     return {"status": payment.status, "mpesa_code": payment.mpesa_code}
 
+# LOCKED — only admin should see all payment records
 @router.get("/all")
-def all_payments(db: Session = Depends(get_db)):
+def all_payments(db: Session = Depends(get_db), token: str = Depends(verify_token)):
     payments = db.query(PendingPayment).all()
     result = []
     for p in payments:

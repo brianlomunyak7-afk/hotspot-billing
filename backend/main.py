@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
-from routes import tenants, packages, payments, subscriptions
+from routes import tenants, packages, payments, subscriptions, auth
 from apscheduler.schedulers.background import BackgroundScheduler
 from database import SessionLocal
 import crud
@@ -21,6 +21,7 @@ app.include_router(tenants.router)
 app.include_router(packages.router)
 app.include_router(payments.router)
 app.include_router(subscriptions.router)
+app.include_router(auth.router)
 
 def daily_check():
     db = SessionLocal()
