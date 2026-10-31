@@ -1,134 +1,105 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from database import get_db
-from pydantic import BaseModel
-from routes.auth import verify_token
-import crud
-import requests
 import base64
 import os
 from datetime import datetime
-from dotenv import load_dotenv
-from models import PendingPayment
 
-load_dotenv()
+import requests
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+import crud
+from database import get_db
+from models import PendingPayment, User
+from routes.auth import get_current_user, get_public_organization
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
+
 
 class STKRequest(BaseModel):
     tenant_id: int
     package_id: int
-    phone: str
-    amount: float
+    phone: str = Field(min_length=7, max_length=20)
 
-def get_mpesa_token():
-    consumer_key = os.getenv("MPESA_CONSUMER_KEY")
-    consumer_secret = os.getenv("MPESA_CONSUMER_SECRET")
-    credentials = base64.b64encode(f"{consumer_key}:{consumer_secret}".encode()).decode()
-    res = requests.get(
-        "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
-        headers={"Authorization": f"Basic {credentials}"}
-    )
-    return res.json().get("access_token")
 
-def generate_password():
+def normalize_phone(phone: str) -> str:
+    value = phone.strip().replace(" ", "")
+    if value.startswith("+"):
+        value = value[1:]
+    if value.startswith("0"):
+        value = "254" + value[1:]
+    if not value.isdigit() or len(value) < 10:
+        raise HTTPException(422, "Enter a valid phone number")
+    return value
+
+
+def daraja_base_url() -> str:
+    return "https://api.safaricom.co.ke" if os.getenv("MPESA_ENV", "sandbox") == "production" else "https://sandbox.safaricom.co.ke"
+
+
+def get_mpesa_token() -> str:
+    key, secret = os.getenv("MPESA_CONSUMER_KEY"), os.getenv("MPESA_CONSUMER_SECRET")
+    if not key or not secret:
+        raise HTTPException(503, "M-Pesa is not configured")
+    response = requests.get(f"{daraja_base_url()}/oauth/v1/generate?grant_type=client_credentials",
+                            auth=(key, secret), timeout=15)
+    response.raise_for_status()
+    token = response.json().get("access_token")
+    if not token:
+        raise HTTPException(503, "M-Pesa authentication failed")
+    return token
+
+
+@router.post("/stk-push")
+def stk_push(data: STKRequest, db: Session = Depends(get_db), organization=Depends(get_public_organization)):
+    tenant = crud.get_tenant(db, data.tenant_id, organization.id)
+    package = crud.get_package(db, data.package_id, organization.id)
+    if not tenant or not package:
+        raise HTTPException(404, "Tenant or package not found")
+    phone = normalize_phone(data.phone)
     shortcode = os.getenv("MPESA_SHORTCODE")
     passkey = os.getenv("MPESA_PASSKEY")
+    callback = os.getenv("MPESA_CALLBACK_URL") or os.getenv("CALLBACK_URL")
+    if not shortcode or not passkey or not callback:
+        raise HTTPException(503, "M-Pesa payment configuration is incomplete")
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    raw = f"{shortcode}{passkey}{timestamp}"
-    password = base64.b64encode(raw.encode()).decode()
-    return password, timestamp
+    password = base64.b64encode(f"{shortcode}{passkey}{timestamp}".encode()).decode()
+    payload = {"BusinessShortCode": shortcode, "Password": password, "Timestamp": timestamp,
+               "TransactionType": "CustomerPayBillOnline", "Amount": int(package.price),
+               "PartyA": phone, "PartyB": shortcode, "PhoneNumber": phone,
+               "CallBackURL": callback, "AccountReference": f"HB-{organization.slug}",
+               "TransactionDesc": f"{package.name} subscription"}
+    response = requests.post(f"{daraja_base_url()}/mpesa/stkpush/v1/processrequest", json=payload,
+                             headers={"Authorization": f"Bearer {get_mpesa_token()}"}, timeout=20)
+    response.raise_for_status()
+    result = response.json()
+    if result.get("ResponseCode") != "0":
+        raise HTTPException(400, result.get("errorMessage") or result.get("ResponseDescription") or "STK push failed")
+    subscription = crud.create_subscription(db, organization.id, tenant.id, package.id)
+    pending = crud.create_pending_payment(db, organization.id, tenant.id, result["CheckoutRequestID"], subscription.id, package.price)
+    return {"checkout_request_id": pending.checkout_request_id, "subscription_id": subscription.id}
 
-# LOCKED — manual payment recording is an admin-only action
-@router.post("/")
-def record_payment(tenant_id: int, amount: float, mpesa_code: str, subscription_id: int,
-                    db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    return crud.create_payment(db, tenant_id, amount, mpesa_code, subscription_id)
 
-# OPEN — the client portal triggers this to start a payment
-@router.post("/stk-push")
-def stk_push(data: STKRequest, db: Session = Depends(get_db)):
-    token = get_mpesa_token()
-    password, timestamp = generate_password()
-    shortcode = os.getenv("MPESA_SHORTCODE")
-    callback_url = os.getenv("CALLBACK_URL")
-    phone = data.phone.strip()
-    if phone.startswith("0"):
-        phone = "254" + phone[1:]
-    elif phone.startswith("+"):
-        phone = phone[1:]
-
-    payload = {
-        "BusinessShortCode": shortcode,
-        "Password": password,
-        "Timestamp": timestamp,
-        "TransactionType": "CustomerPayBillOnline",
-        "Amount": int(data.amount),
-        "PartyA": phone,
-        "PartyB": shortcode,
-        "PhoneNumber": phone,
-        "CallBackURL": callback_url,
-        "AccountReference": "HotspotBilling",
-        "TransactionDesc": "Internet Payment"
-    }
-
-    res = requests.post(
-        "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
-        json=payload,
-        headers={"Authorization": f"Bearer {token}"}
-    )
-
-    result = res.json()
-
-    if result.get("ResponseCode") == "0":
-        sub = crud.create_subscription(db, data.tenant_id, data.package_id)
-        pending = crud.create_pending_payment(db, data.tenant_id, result["CheckoutRequestID"], sub.id, data.amount)
-        return {"checkout_request_id": result["CheckoutRequestID"], "subscription_id": sub.id}
-    else:
-        raise HTTPException(status_code=400, detail=result.get("errorMessage", "STK Push failed"))
-
-# OPEN — Safaricom's servers call this directly, it can't carry your admin token
 @router.post("/callback")
 def mpesa_callback(payload: dict, db: Session = Depends(get_db)):
-    print("=== CALLBACK RECEIVED ===")
-    print(payload)
     try:
         body = payload["Body"]["stkCallback"]
-        checkout_id = body["CheckoutRequestID"]
-        result_code = body["ResultCode"]
-        print(f"checkout_id={checkout_id} result_code={result_code}")
+        checkout_id, result_code = body["CheckoutRequestID"], body["ResultCode"]
         if result_code == 0:
-            items = body["CallbackMetadata"]["Item"]
-            mpesa_code = next(i["Value"] for i in items if i["Name"] == "MpesaReceiptNumber")
-            updated = crud.confirm_payment(db, checkout_id, mpesa_code)
-            print(f"confirm_payment result: {updated}")
+            receipt = next(item["Value"] for item in body["CallbackMetadata"]["Item"] if item["Name"] == "MpesaReceiptNumber")
+            crud.confirm_payment(db, checkout_id, str(receipt))
         else:
-            updated = crud.fail_payment(db, checkout_id)
-            print(f"fail_payment result: {updated}")
-    except Exception as e:
-        print(f"CALLBACK ERROR: {e}")
+            crud.fail_payment(db, checkout_id)
+    except (KeyError, StopIteration, TypeError):
+        raise HTTPException(400, "Invalid M-Pesa callback")
     return {"ResultCode": 0, "ResultDesc": "Accepted"}
 
-# OPEN — the client portal polls this while waiting for payment confirmation
+
 @router.get("/status/{checkout_request_id}")
 def payment_status(checkout_request_id: str, db: Session = Depends(get_db)):
     payment = crud.get_payment_by_checkout(db, checkout_request_id)
-    if not payment:
-        return {"status": "pending"}
-    return {"status": payment.status, "mpesa_code": payment.mpesa_code}
+    return {"status": payment.status if payment else "pending", "mpesa_code": payment.mpesa_code if payment else None}
 
-# LOCKED — only admin should see all payment records
+
 @router.get("/all")
-def all_payments(db: Session = Depends(get_db), token: str = Depends(verify_token)):
-    payments = db.query(PendingPayment).all()
-    result = []
-    for p in payments:
-        tenant = crud.get_tenant(db, p.tenant_id)
-        result.append({
-            "tenant_name": tenant.name if tenant else "Unknown",
-            "amount": p.amount,
-            "mpesa_code": p.mpesa_code,
-            "status": p.status,
-            "created_at": p.created_at
-        })
-    return result
+def all_payments(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    return db.query(PendingPayment).filter(PendingPayment.organization_id == user.organization_id).order_by(PendingPayment.created_at.desc()).all()
