@@ -1,6 +1,6 @@
-# 📶 M-Pesa WiFi Hotspot Billing System
+# Hotspot Billing SaaS
 
-A full-stack open source WiFi hotspot billing system with M-Pesa STK Push payments and MikroTik router integration. Built for cybercafés, small businesses, and public WiFi hotspots across Kenya.
+A deployable FastAPI SaaS for hotspot operators with organization-scoped administration, customer portals, M-Pesa STK Push payments, subscription expiry, and MikroTik integration.
 
 > Built with FastAPI · SQLite · MikroTik API · Safaricom Daraja
 
@@ -103,7 +103,7 @@ MPESA_CONSUMER_KEY=your_consumer_key
 MPESA_CONSUMER_SECRET=your_consumer_secret
 MPESA_SHORTCODE=your_till_number
 MPESA_PASSKEY=your_passkey
-MPESA_CALLBACK_URL=https://yourdomain.co.ke/mpesa/callback
+MPESA_CALLBACK_URL=https://yourdomain.co.ke/payments/callback
 MPESA_ENV=sandbox
 
 # MikroTik
