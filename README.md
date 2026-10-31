@@ -2,7 +2,7 @@
 
 A deployable FastAPI SaaS for hotspot operators with organization-scoped administration, customer portals, M-Pesa STK Push payments, subscription expiry, and MikroTik integration.
 
-> Built with FastAPI · SQLite · MikroTik API · Safaricom Daraja
+> Built with FastAPI · PostgreSQL · MikroTik API · Safaricom Daraja
 
 ---
 
@@ -49,7 +49,7 @@ hotspot-billing/
 │   │   └── index.html       # Admin dashboard
 │   └── portal/
 │       └── index.html       # Tenant payment portal
-└── docker-compose.yml       # Docker Compose setup
+└── docker-compose.yml       # PostgreSQL + API + frontend deployment
 ```
 
 ---
@@ -116,8 +116,10 @@ SECRET_KEY=your_secret_key_here
 ```
 
 > ⚠️ Never commit your `.env` file to GitHub. It is already in `.gitignore`.
+> If credentials were ever shared in logs, screenshots, shell output, or a public
+> repository, rotate the M-Pesa, router, and admin credentials immediately.
 
-### Step 5 — Start the server
+### Step 5 — Start the server locally
 
 ```bash
 cd backend
@@ -136,8 +138,23 @@ INFO:     Started reloader process
 | Page | URL |
 |------|-----|
 | API docs | `http://localhost:8000/docs` |
-| Admin dashboard | `frontend/admin/index.html` |
-| Tenant portal | `frontend/portal/index.html` |
+| Admin dashboard | `http://localhost/admin/` |
+| Tenant portal | `http://localhost/portal/` |
+
+### Docker deployment
+
+Copy the environment template, set a strong `SECRET_KEY`, database password,
+admin credentials, and payment credentials, then start the complete stack:
+
+```bash
+cp backend/.env.example backend/.env
+docker compose up --build -d
+docker compose ps
+curl http://localhost/api/health
+```
+
+For production, put the frontend behind HTTPS and set
+`MPESA_CALLBACK_URL=https://your-domain.example.com/api/payments/callback`.
 
 ---
 
@@ -173,7 +190,7 @@ https://hotspot-billing-production.up.railway.app
 
 Update `MPESA_CALLBACK_URL` in Railway:
 ```
-https://hotspot-billing-production.up.railway.app/mpesa/callback
+https://hotspot-billing-production.up.railway.app/payments/callback
 ```
 
 ---
@@ -265,7 +282,7 @@ MPESA_CONSUMER_SECRET=your_live_consumer_secret
 | POST | `/tenants/` | Add new tenant |
 | PUT | `/tenants/{id}/toggle` | Enable/Disable tenant |
 | DELETE | `/tenants/{id}` | Delete tenant |
-| POST | `/mpesa/callback` | M-Pesa payment callback |
+| POST | `/payments/callback` | M-Pesa payment callback |
 
 Full interactive docs: `http://localhost:8000/docs`
 
