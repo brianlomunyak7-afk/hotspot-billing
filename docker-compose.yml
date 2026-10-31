@@ -9,7 +9,7 @@ services:
       - ./backend/.env
     volumes:
       - ./backend/hotspot.db:/app/hotspot.db
-    restart: always
+    restart: unless-stopped
 
   frontend:
     image: nginx:alpine
@@ -17,4 +17,4 @@ services:
       - "80:80"
     volumes:
       - ./frontend:/usr/share/nginx/html
-    restart: always
+    restart: unless-stopped
