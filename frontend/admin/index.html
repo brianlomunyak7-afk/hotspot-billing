@@ -135,7 +135,7 @@
   </div>
 
   <script>
-    const API = "http://127.0.0.1:8000";
+    const API = window.API_URL || (window.location.port === "8000" ? "" : "/api");
     let token = null; // kept in memory only, never in localStorage
 
     function authHeaders(extra = {}) {
@@ -242,9 +242,10 @@
       const price = document.getElementById("p-price").value;
       const type = document.getElementById("p-type").value;
       if (!name || !duration || !price) { alert("Fill in all fields."); return; }
-      const res = await fetch(`${API}/packages/?name=${encodeURIComponent(name)}&duration_days=${duration}&price=${price}&duration_type=${type}`, {
+      const res = await fetch(`${API}/packages/`, {
         method: "POST",
-        headers: authHeaders()
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ name, duration_days: Number(duration), price: Number(price), duration_type: type })
       });
       if (handleAuthError(res)) return;
       document.getElementById("p-name").value = "";
@@ -279,9 +280,10 @@
       const duration = document.getElementById("edit-duration").value;
       const price = document.getElementById("edit-price").value;
       const type = document.getElementById("edit-type").value;
-      const res = await fetch(`${API}/packages/${id}?name=${encodeURIComponent(name)}&duration_days=${duration}&price=${price}&duration_type=${type}`, {
+      const res = await fetch(`${API}/packages/${id}`, {
         method: "PUT",
-        headers: authHeaders()
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ name, duration_days: Number(duration), price: Number(price), duration_type: type })
       });
       if (handleAuthError(res)) return;
       closeModal();
