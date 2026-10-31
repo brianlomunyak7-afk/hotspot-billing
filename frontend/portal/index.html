@@ -81,7 +81,7 @@
 </div>
 
 <script>
-  const API = "http://127.0.0.1:8000";
+  const API = window.API_URL || (window.location.port === "8000" ? "" : "/api");
   let selectedPackage = null;
   let currentTenant = null;
   let countdownTimer = null;
@@ -156,14 +156,18 @@
     if (!raw) { alert("Enter your phone number."); return; }
     const phone = formatPhone(raw);
 
-    const res = await fetch(`${API}/tenants/`);
+    const res = await fetch(`${API}/tenants/public?phone=${encodeURIComponent(phone)}`);
     const tenants = await res.json();
-    const found = tenants.find(t => t.phone === phone || t.phone === raw);
+    const found = tenants && tenants.id ? tenants : null;
 
     if (found) {
       currentTenant = found;
     } else {
-      const reg = await fetch(`${API}/tenants/?name=Guest&phone=${phone}&router_name=walkin`, { method: "POST" });
+      const reg = await fetch(`${API}/tenants/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Guest", phone, router_name: "walkin" })
+      });
       currentTenant = await reg.json();
     }
 
