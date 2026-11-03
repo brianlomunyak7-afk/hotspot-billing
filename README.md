@@ -1,4 +1,4 @@
-# Hotspot Billing SaaS
+# Hotspot Billing
 
 A deployable FastAPI SaaS for hotspot operators with organization-scoped administration, customer portals, M-Pesa STK Push payments, subscription expiry, and MikroTik integration.
 
@@ -6,7 +6,7 @@ A deployable FastAPI SaaS for hotspot operators with organization-scoped adminis
 
 ---
 
-## 🧱 How It Works
+## How It Works
 
 ```
 Tenant connects to WiFi
@@ -28,7 +28,7 @@ Access expires when subscription ends → blocked automatically
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 hotspot-billing/
@@ -54,7 +54,7 @@ hotspot-billing/
 
 ---
 
-## ⚙️ Requirements
+## Requirements
 
 - Python 3.12+
 - pip
@@ -65,7 +65,7 @@ hotspot-billing/
 
 ---
 
-## 🚀 Local Setup
+## Local Setup
 
 ### Step 1 — Clone the project
 
