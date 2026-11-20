@@ -2,345 +2,1041 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Phantech Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hotspot Admin</title>
   <style>
+    :root {
+      --primary: #0f172a;
+      --primary-light: #1e293b;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-secondary: #64748b;
+      --text-muted: #94a3b8;
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #f4f4f4; }
-    nav { background: #1a1a2e; color: white; padding: 16px 24px; font-size: 20px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-    nav button { width: auto; padding: 8px 16px; font-size: 13px; }
-    .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
-    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-    .tab { padding: 10px 20px; cursor: pointer; background: #ddd; border-radius: 6px; font-weight: bold; }
-    .tab.active { background: #1a1a2e; color: white; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+    a { color: var(--accent); text-decoration: none; }
+
+    /* Toast */
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 8px; }
+    .toast { padding: 12px 20px; border-radius: var(--radius); color: #fff; font-size: 14px; font-weight: 500; box-shadow: var(--shadow-lg); animation: slideIn 0.3s ease; min-width: 280px; display: flex; justify-content: space-between; align-items: center; }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+    .toast.info { background: var(--accent); }
+    .toast .close-toast { background: none; border: none; color: #fff; cursor: pointer; font-size: 18px; padding: 0 0 0 12px; opacity: 0.8; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* Login */
+    #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--primary) 0%, #1e3a5f 100%); }
+    #login-box { background: var(--card); border-radius: 16px; padding: 40px; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    #login-box h2 { text-align: center; margin-bottom: 8px; font-size: 24px; color: var(--primary); }
+    #login-box .subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 28px; font-size: 14px; }
+    #login-error { color: var(--danger); font-size: 13px; text-align: center; margin-bottom: 12px; min-height: 18px; }
+    #admin-app { display: none; }
+
+    /* Sidebar + Layout */
+    .app-layout { display: flex; min-height: 100vh; }
+    .sidebar { width: 240px; background: var(--primary); color: #fff; padding: 0; flex-shrink: 0; display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 100; }
+    .sidebar-brand { padding: 20px 24px; font-size: 18px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
+    .sidebar-brand .brand-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+    .sidebar-nav .nav-item { padding: 10px 24px; cursor: pointer; font-size: 14px; color: rgba(255,255,255,0.7); transition: all 0.2s; display: flex; align-items: center; gap: 12px; border-left: 3px solid transparent; }
+    .sidebar-nav .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .sidebar-nav .nav-item.active { background: rgba(255,255,255,0.1); color: #fff; border-left-color: var(--accent); }
+    .sidebar-nav .nav-item .nav-icon { width: 20px; text-align: center; font-size: 16px; }
+    .sidebar-footer { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.1); }
+    .sidebar-footer .user-info { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 8px; }
+    .sidebar-footer button { width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: none; color: rgba(255,255,255,0.8); border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .sidebar-footer button:hover { background: rgba(255,255,255,0.2); }
+    .main-content { flex: 1; margin-left: 240px; padding: 24px 32px; min-height: 100vh; }
+
+    /* Top bar */
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .page-title { font-size: 24px; font-weight: 700; }
+    .page-subtitle { font-size: 14px; color: var(--text-secondary); margin-top: 2px; }
+
+    /* Cards */
+    .card { background: var(--card); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .card-header h3 { font-size: 16px; font-weight: 600; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .stat-card .stat-label { font-size: 13px; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-card .stat-value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+    .stat-card .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .stat-card.blue .stat-value { color: var(--accent); }
+    .stat-card.green .stat-value { color: var(--success); }
+    .stat-card.amber .stat-value { color: var(--warning); }
+    .stat-card.red .stat-value { color: var(--danger); }
+
+    /* Chart */
+    .chart-container { margin-bottom: 24px; }
+    .chart-bar-group { display: flex; align-items: flex-end; gap: 8px; height: 160px; padding: 0 4px; }
+    .chart-bar-wrapper { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+    .chart-bar { width: 100%; max-width: 48px; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.4s ease; position: relative; }
+    .chart-bar:hover { background: var(--accent-hover); }
+    .chart-bar .chart-tooltip { display: none; position: absolute; top: -28px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap; }
+    .chart-bar:hover .chart-tooltip { display: block; }
+    .chart-label { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    /* Forms */
+    input, select, textarea { padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; width: 100%; font-size: 14px; font-family: inherit; color: var(--text); background: var(--card); transition: border-color 0.2s; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    input::placeholder { color: var(--text-muted); }
+    label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; }
+    .form-group { margin-bottom: 14px; }
+    .form-row { display: flex; gap: 12px; }
+    .form-row > * { flex: 1; }
+
+    /* Buttons */
+    button, .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; font-family: inherit; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: var(--danger-hover); }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover { background: #059669; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-group { display: flex; gap: 6px; }
+
+    /* Tables */
+    .table-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+    .search-box { position: relative; flex: 1; max-width: 320px; }
+    .search-box input { padding-left: 36px; }
+    .search-box .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; background: var(--bg); border-bottom: 1px solid var(--border); }
+    td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    .table-empty { text-align: center; padding: 40px; color: var(--text-muted); }
+
+    /* Badges */
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-success { background: #d1fae5; color: #065f46; }
+    .badge-danger { background: #fee2e2; color: #991b1b; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-info { background: #dbeafe; color: #1e40af; }
+    .badge-gray { background: #f1f5f9; color: #475569; }
+
+    /* Pagination */
+    .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 13px; color: var(--text-secondary); }
+    .pagination-buttons { display: flex; gap: 4px; }
+    .pagination-buttons button { padding: 6px 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .pagination-buttons button:hover { background: var(--bg); }
+    .pagination-buttons button:disabled { opacity: 0.4; cursor: default; }
+    .pagination-buttons button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--card); border-radius: 12px; padding: 28px; width: 100%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+    .modal h3 { font-size: 18px; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+    /* Sections */
     .section { display: none; }
     .section.active { display: block; }
-    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-    input, select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; width: 100%; margin-bottom: 10px; }
-    .duration-row { display: flex; gap: 10px; }
-    .duration-row select { width: 140px; flex-shrink: 0; }
-    .duration-row input { flex: 1; }
-    button { padding: 10px 20px; background: #1a1a2e; color: white; border: none; border-radius: 6px; cursor: pointer; }
-    button.danger { background: #e74c3c; }
-    button.warning { background: #f39c12; }
-    button.small { padding: 6px 12px; font-size: 13px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-    th { background: #f9f9f9; font-weight: bold; }
-    .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-    .badge.active { background: #d4edda; color: #155724; }
-    .badge.inactive { background: #f8d7da; color: #721c24; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center; }
-    .modal.open { display: flex; }
-    .modal-box { background: white; border-radius: 10px; padding: 28px; width: 100%; max-width: 400px; }
-    .modal-box h3 { margin-bottom: 16px; }
-    .modal-actions { display: flex; gap: 10px; margin-top: 10px; }
 
-    /* Login screen */
-    #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #1a1a2e; }
-    #login-box { background: white; border-radius: 12px; padding: 32px; width: 100%; max-width: 380px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-    #login-box h2 { text-align: center; margin-bottom: 20px; color: #1a1a2e; }
-    #login-error { color: #e74c3c; font-size: 13px; text-align: center; margin-bottom: 10px; min-height: 18px; }
-    #admin-app { display: none; }
+    /* Loading */
+    .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-overlay { display: flex; justify-content: center; align-items: center; padding: 40px; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { width: 0; overflow: hidden; }
+      .sidebar.open { width: 240px; }
+      .main-content { margin-left: 0; padding: 16px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .form-row { flex-direction: column; }
+      .table-controls { flex-direction: column; align-items: stretch; }
+      .search-box { max-width: none; }
+      .mobile-toggle { display: block !important; }
+    }
+    .mobile-toggle { display: none; position: fixed; top: 16px; left: 16px; z-index: 200; background: var(--primary); color: #fff; border: none; border-radius: 8px; width: 40px; height: 40px; cursor: pointer; font-size: 20px; }
   </style>
 </head>
 <body>
 
-  <!-- LOGIN SCREEN -->
+  <!-- TOAST -->
+  <div id="toast-container"></div>
+
+  <!-- LOGIN -->
   <div id="login-screen">
     <div id="login-box">
-      <h2>Phantech Admin</h2>
+      <h2>Hotspot Billing</h2>
+      <div class="subtitle">Admin Dashboard</div>
       <div id="login-error"></div>
-      <input id="login-username" placeholder="Username" autocomplete="username" />
-      <input id="login-password" placeholder="Password" type="password" autocomplete="current-password" />
-      <button onclick="login()">Login</button>
+      <div class="form-group">
+        <label>Username</label>
+        <input id="login-username" placeholder="Enter username" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input id="login-password" placeholder="Enter password" type="password" autocomplete="current-password" />
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="login()">Sign In</button>
     </div>
   </div>
 
-  <!-- ADMIN APP (hidden until logged in) -->
+  <!-- APP -->
   <div id="admin-app">
-    <nav>
-      <span>Phantech — Admin</span>
-      <button onclick="logout()">Logout</button>
-    </nav>
-    <div class="container">
-      <div class="tabs">
-        <div class="tab active" onclick="switchTab('packages', this)">Packages</div>
-        <div class="tab" onclick="switchTab('tenants', this)">Tenants</div>
-        <div class="tab" onclick="switchTab('payments', this)">Payments</div>
-      </div>
+    <button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
 
-      <div id="packages" class="section active">
-        <div class="card">
-          <h3 style="margin-bottom:16px">Add Package</h3>
-          <input id="p-name" placeholder="Package Name (e.g. 15 Minutes, Monthly)" />
-          <div class="duration-row">
-            <select id="p-type" onchange="updateDurationRange()">
-              <option value="minutes">Minutes</option>
-              <option value="days" selected>Days</option>
-            </select>
-            <input id="p-duration" placeholder="Duration" type="number" min="1" max="30" />
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="brand-icon">H</div>
+          <span>Hotspot Admin</span>
+        </div>
+        <nav class="sidebar-nav">
+          <div class="nav-item active" onclick="switchSection('overview', this)">
+            <span class="nav-icon">&#9673;</span> Overview
           </div>
-          <input id="p-price" placeholder="Price (KES)" type="number" />
-          <button onclick="addPackage()">Add Package</button>
+          <div class="nav-item" onclick="switchSection('packages', this)">
+            <span class="nav-icon">&#9741;</span> Packages
+          </div>
+          <div class="nav-item" onclick="switchSection('tenants', this)">
+            <span class="nav-icon">&#9787;</span> Tenants
+          </div>
+          <div class="nav-item" onclick="switchSection('subscriptions', this)">
+            <span class="nav-icon">&#9201;</span> Subscriptions
+          </div>
+          <div class="nav-item" onclick="switchSection('payments', this)">
+            <span class="nav-icon">&#9733;</span> Payments
+          </div>
+          <div class="nav-item" onclick="switchSection('users-section', this)">
+            <span class="nav-icon">&#9881;</span> Users
+          </div>
+          <div class="nav-item" onclick="switchSection('settings', this)">
+            <span class="nav-icon">&#9881;</span> Settings
+          </div>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="user-info">Signed in as <strong id="sidebar-username"></strong></div>
+          <button onclick="logout()">Sign Out</button>
         </div>
-        <div class="card">
-          <h3 style="margin-bottom:16px">All Packages</h3>
-          <table>
-            <thead><tr><th>Name</th><th>Duration</th><th>Price (KES)</th><th>Actions</th></tr></thead>
-            <tbody id="package-list"></tbody>
-          </table>
-        </div>
-      </div>
+      </aside>
 
-      <div id="tenants" class="section">
-        <div class="card">
-          <h3 style="margin-bottom:16px">All Tenants</h3>
-          <table>
-            <thead><tr><th>Name</th><th>Phone</th><th>Router</th><th>Status</th><th>Action</th></tr></thead>
-            <tbody id="tenant-list"></tbody>
-          </table>
-        </div>
-      </div>
+      <main class="main-content">
 
-      <div id="payments" class="section">
-        <div class="card">
-          <h3 style="margin-bottom:16px">All Payments</h3>
-          <table>
-            <thead><tr><th>Tenant</th><th>Amount</th><th>M-Pesa Code</th><th>Status</th><th>Date</th></tr></thead>
-            <tbody id="payment-list"></tbody>
-          </table>
+        <!-- OVERVIEW -->
+        <div id="overview" class="section active">
+          <div class="top-bar">
+            <div>
+              <div class="page-title">Dashboard</div>
+              <div class="page-subtitle">Overview of your hotspot business</div>
+            </div>
+          </div>
+          <div class="stats-grid" id="stats-grid">
+            <div class="stat-card blue"><div class="stat-label">Total Revenue</div><div class="stat-value" id="stat-revenue">--</div><div class="stat-sub" id="stat-revenue-sub"></div></div>
+            <div class="stat-card green"><div class="stat-label">Monthly Revenue</div><div class="stat-value" id="stat-monthly">--</div><div class="stat-sub" id="stat-monthly-sub"></div></div>
+            <div class="stat-card amber"><div class="stat-label">Active Subscriptions</div><div class="stat-value" id="stat-subs">--</div><div class="stat-sub" id="stat-subs-sub"></div></div>
+            <div class="stat-card"><div class="stat-label">Total Tenants</div><div class="stat-value" id="stat-tenants">--</div><div class="stat-sub" id="stat-tenants-sub"></div></div>
+          </div>
+          <div class="card chart-container">
+            <div class="card-header"><h3>Revenue (Last 7 Days)</h3></div>
+            <div class="chart-bar-group" id="revenue-chart"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>Recent Payments</h3></div>
+            <table>
+              <thead><tr><th>Tenant</th><th>Amount</th><th>Status</th><th>M-Pesa Code</th><th>Date</th></tr></thead>
+              <tbody id="recent-payments-list"></tbody>
+            </table>
+          </div>
         </div>
-      </div>
+
+        <!-- PACKAGES -->
+        <div id="packages" class="section">
+          <div class="top-bar">
+            <div>
+              <div class="page-title">Packages</div>
+              <div class="page-subtitle">Manage internet packages and pricing</div>
+            </div>
+            <button class="btn btn-primary" onclick="openAddPackageModal()">+ Add Package</button>
+          </div>
+          <div class="card">
+            <table>
+              <thead><tr><th>Name</th><th>Duration</th><th>Price (KES)</th><th>Actions</th></tr></thead>
+              <tbody id="package-list"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TENANTS -->
+        <div id="tenants" class="section">
+          <div class="top-bar">
+            <div>
+              <div class="page-title">Tenants</div>
+              <div class="page-subtitle">Manage registered customers</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="table-controls">
+              <div class="search-box">
+                <span class="search-icon">&#128269;</span>
+                <input id="tenant-search" placeholder="Search by name or phone..." oninput="debouncedLoadTenants()" />
+              </div>
+              <button class="btn btn-outline btn-sm" onclick="exportTenants()">Export CSV</button>
+            </div>
+            <table>
+              <thead><tr><th>Name</th><th>Phone</th><th>Router</th><th>Subscription</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="tenant-list"></tbody>
+            </table>
+            <div class="pagination" id="tenants-pagination"></div>
+          </div>
+        </div>
+
+        <!-- SUBSCRIPTIONS -->
+        <div id="subscriptions" class="section">
+          <div class="top-bar">
+            <div>
+              <div class="page-title">Subscriptions</div>
+              <div class="page-subtitle">All customer subscriptions</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="table-controls">
+              <div class="search-box">
+                <span class="search-icon">&#128269;</span>
+                <input id="sub-search" placeholder="Search..." oninput="debouncedLoadSubscriptions()" />
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-outline btn-sm" id="sub-filter-all" onclick="setSubFilter('')">All</button>
+                <button class="btn btn-outline btn-sm" id="sub-filter-active" onclick="setSubFilter('active')">Active</button>
+              </div>
+            </div>
+            <table>
+              <thead><tr><th>Tenant</th><th>Phone</th><th>Package</th><th>Price</th><th>Start</th><th>End</th><th>Status</th></tr></thead>
+              <tbody id="subscription-list"></tbody>
+            </table>
+            <div class="pagination" id="subs-pagination"></div>
+          </div>
+        </div>
+
+        <!-- PAYMENTS -->
+        <div id="payments" class="section">
+          <div class="top-bar">
+            <div>
+              <div class="page-title">Payments</div>
+              <div class="page-subtitle">All M-Pesa transactions</div>
+            </div>
+            <button class="btn btn-outline" onclick="exportPayments()">Export CSV</button>
+          </div>
+          <div class="card">
+            <div class="table-controls">
+              <div class="search-box">
+                <span class="search-icon">&#128269;</span>
+                <input id="payment-search" placeholder="Search by tenant or M-Pesa code..." oninput="debouncedLoadPayments()" />
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-outline btn-sm" onclick="setPaymentFilter('')">All</button>
+                <button class="btn btn-outline btn-sm" onclick="setPaymentFilter('confirmed')">Confirmed</button>
+                <button class="btn btn-outline btn-sm" onclick="setPaymentFilter('pending')">Pending</button>
+                <button class="btn btn-outline btn-sm" onclick="setPaymentFilter('failed')">Failed</button>
+              </div>
+            </div>
+            <table>
+              <thead><tr><th>Tenant</th><th>Amount (KES)</th><th>M-Pesa Code</th><th>Status</th><th>Date</th></tr></thead>
+              <tbody id="payment-list"></tbody>
+            </table>
+            <div class="pagination" id="payments-pagination"></div>
+          </div>
+        </div>
+
+        <!-- USERS -->
+        <div id="users-section" class="section">
+          <div class="top-bar">
+            <div>
+              <div class="page-title">Users</div>
+              <div class="page-subtitle">Manage admin users</div>
+            </div>
+            <button class="btn btn-primary" onclick="openAddUserModal()">+ Add User</button>
+          </div>
+          <div class="card">
+            <table>
+              <thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+              <tbody id="user-list"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="settings" class="section">
+          <div class="top-bar">
+            <div>
+              <div class="page-title">Settings</div>
+              <div class="page-subtitle">Organization and account settings</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+            <div class="card">
+              <h3 style="margin-bottom:16px">Organization Profile</h3>
+              <div class="form-group">
+                <label>Organization Name</label>
+                <input id="org-name" placeholder="Organization Name" />
+              </div>
+              <div class="form-group">
+                <label>Slug</label>
+                <input id="org-slug" disabled />
+              </div>
+              <button class="btn btn-primary" onclick="saveOrgProfile()">Save Changes</button>
+            </div>
+            <div class="card">
+              <h3 style="margin-bottom:16px">Change Password</h3>
+              <div class="form-group">
+                <label>Current Password</label>
+                <input id="pw-current" type="password" placeholder="Current password" />
+              </div>
+              <div class="form-group">
+                <label>New Password</label>
+                <input id="pw-new" type="password" placeholder="New password (min 6 characters)" />
+              </div>
+              <div class="form-group">
+                <label>Confirm New Password</label>
+                <input id="pw-confirm" type="password" placeholder="Confirm new password" />
+              </div>
+              <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+            </div>
+          </div>
+        </div>
+
+      </main>
     </div>
+  </div>
 
-    <div class="modal" id="edit-modal">
-      <div class="modal-box">
-        <h3>Edit Package</h3>
-        <input id="edit-name" placeholder="Package Name" />
-        <div class="duration-row">
-          <select id="edit-type" onchange="updateEditDurationRange()">
+  <!-- MODALS -->
+  <div class="modal-overlay" id="package-modal">
+    <div class="modal">
+      <h3 id="package-modal-title">Add Package</h3>
+      <input type="hidden" id="pkg-edit-id" />
+      <div class="form-group">
+        <label>Package Name</label>
+        <input id="pkg-name" placeholder="e.g. 30 Minutes, Daily, Weekly" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Duration Type</label>
+          <select id="pkg-type" onchange="updatePkgRange()">
             <option value="minutes">Minutes</option>
-            <option value="days">Days</option>
+            <option value="days" selected>Days</option>
           </select>
-          <input id="edit-duration" placeholder="Duration" type="number" min="1" max="30" />
         </div>
-        <input id="edit-price" placeholder="Price (KES)" type="number" />
-        <input type="hidden" id="edit-id" />
-        <div class="modal-actions">
-          <button onclick="saveEdit()">Save</button>
-          <button class="danger" onclick="closeModal()">Cancel</button>
+        <div class="form-group">
+          <label>Duration</label>
+          <input id="pkg-duration" placeholder="e.g. 7" type="number" min="1" max="365" />
         </div>
+      </div>
+      <div class="form-group">
+        <label>Price (KES)</label>
+        <input id="pkg-price" placeholder="e.g. 100" type="number" min="0" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('package-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="savePackage()">Save</button>
       </div>
     </div>
   </div>
 
+  <div class="modal-overlay" id="tenant-modal">
+    <div class="modal">
+      <h3>Edit Tenant</h3>
+      <input type="hidden" id="tenant-edit-id" />
+      <div class="form-group">
+        <label>Name</label>
+        <input id="tenant-edit-name" placeholder="Tenant Name" />
+      </div>
+      <div class="form-group">
+        <label>Phone</label>
+        <input id="tenant-edit-phone" placeholder="Phone Number" />
+      </div>
+      <div class="form-group">
+        <label>Router</label>
+        <input id="tenant-edit-router" placeholder="Router Name" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('tenant-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTenant()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="user-modal">
+    <div class="modal">
+      <h3 id="user-modal-title">Add User</h3>
+      <input type="hidden" id="user-edit-id" />
+      <div class="form-group">
+        <label>Username</label>
+        <input id="user-username" placeholder="Username" />
+      </div>
+      <div class="form-group" id="user-pw-group">
+        <label>Password</label>
+        <input id="user-password" type="password" placeholder="Password (min 6 characters)" />
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="user-role">
+          <option value="admin">Admin</option>
+          <option value="viewer">Viewer</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('user-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveUser()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
   <script>
     const API = window.API_URL || (window.location.port === "8000" ? "" : "/api");
-    let token = null; // kept in memory only, never in localStorage
+    let token = null;
+    let currentUsername = "";
+    const PAGE_SIZE = 20;
+    let tenantsPage = 0, paymentsPage = 0, subsPage = 0;
+    let paymentStatusFilter = "", subActiveFilter = "";
+
+    // --- Utility ---
+    function esc(str) {
+      if (str == null) return "";
+      const d = document.createElement("div");
+      d.textContent = String(str);
+      return d.innerHTML;
+    }
+
+    function toast(message, type = "success") {
+      const container = document.getElementById("toast-container");
+      const el = document.createElement("div");
+      el.className = `toast ${type}`;
+      el.innerHTML = `<span>${esc(message)}</span><button class="close-toast" onclick="this.parentElement.remove()">&times;</button>`;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
 
     function authHeaders(extra = {}) {
       return { ...extra, "Authorization": `Bearer ${token}` };
     }
 
+    function formatDate(iso) {
+      if (!iso) return "N/A";
+      return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+
+    function formatKES(amount) {
+      return Number(amount || 0).toLocaleString("en-KE");
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove("open");
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.add("open");
+    }
+
+    function debounce(fn, ms = 400) {
+      let timer;
+      return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+    }
+
+    async function apiCall(url, options = {}) {
+      const res = await fetch(url, options);
+      if (res.status === 401) { toast("Session expired. Please log in again.", "error"); logout(); return null; }
+      if (res.status === 429) { toast("Too many requests. Please wait.", "error"); return null; }
+      return res;
+    }
+
+    // --- Auth ---
     async function login() {
       const username = document.getElementById("login-username").value;
       const password = document.getElementById("login-password").value;
       const errorEl = document.getElementById("login-error");
       errorEl.textContent = "";
-
-      if (!username || !password) {
-        errorEl.textContent = "Enter username and password.";
-        return;
-      }
-
+      if (!username || !password) { errorEl.textContent = "Enter username and password."; return; }
       try {
-        const res = await fetch(`${API}/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password })
-        });
-
-        if (!res.ok) {
-          errorEl.textContent = "Invalid username or password.";
-          return;
-        }
-
+        const res = await fetch(`${API}/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
+        if (!res.ok) { errorEl.textContent = "Invalid username or password."; return; }
         const data = await res.json();
-        token = data.token;
+        token = data.access_token;
+        currentUsername = username;
+        document.getElementById("sidebar-username").textContent = username;
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("admin-app").style.display = "block";
-        loadPackages();
-      } catch (e) {
-        errorEl.textContent = "Could not reach server. Is the backend running?";
-      }
+        loadOverview();
+      } catch { errorEl.textContent = "Could not reach server."; }
     }
 
     function logout() {
       token = null;
+      currentUsername = "";
       document.getElementById("admin-app").style.display = "none";
       document.getElementById("login-screen").style.display = "flex";
       document.getElementById("login-username").value = "";
       document.getElementById("login-password").value = "";
     }
 
-    function updateDurationRange() {
-      const type = document.getElementById("p-type").value;
-      const input = document.getElementById("p-duration");
-      input.max = type === "minutes" ? 60 : 30;
-      input.placeholder = type === "minutes" ? "1 - 60" : "1 - 30";
-      input.value = "";
-    }
+    document.getElementById("login-password").addEventListener("keydown", e => { if (e.key === "Enter") login(); });
 
-    function updateEditDurationRange() {
-      const type = document.getElementById("edit-type").value;
-      const input = document.getElementById("edit-duration");
-      input.max = type === "minutes" ? 60 : 30;
-    }
-
-    function switchTab(name, el) {
-      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    // --- Navigation ---
+    function switchSection(name, el) {
+      document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
       document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+      if (el) el.classList.add("active");
       document.getElementById(name).classList.add("active");
-      el.classList.add("active");
-      if (name === "tenants") loadTenants();
-      if (name === "packages") loadPackages();
-      if (name === "payments") loadPayments();
+      document.querySelector(".sidebar").classList.remove("open");
+      const loaders = {
+        overview: loadOverview,
+        packages: loadPackages,
+        tenants: () => { tenantsPage = 0; loadTenants(); },
+        subscriptions: () => { subsPage = 0; loadSubscriptions(); },
+        payments: () => { paymentsPage = 0; loadPayments(); },
+        "users-section": loadUsers,
+        settings: loadSettings,
+      };
+      if (loaders[name]) loaders[name]();
     }
 
-    function handleAuthError(res) {
-      if (res.status === 401) {
-        alert("Session expired. Please log in again.");
-        logout();
-        return true;
-      }
-      return false;
+    // --- Overview / Dashboard ---
+    async function loadOverview() {
+      const res = await apiCall(`${API}/dashboard/stats`, { headers: authHeaders() });
+      if (!res) return;
+      const d = await res.json();
+      document.getElementById("stat-revenue").textContent = `KES ${formatKES(d.total_revenue)}`;
+      document.getElementById("stat-revenue-sub").textContent = `${d.total_payments} total transactions`;
+      document.getElementById("stat-monthly").textContent = `KES ${formatKES(d.monthly_revenue)}`;
+      document.getElementById("stat-monthly-sub").textContent = `KES ${formatKES(d.weekly_revenue)} this week`;
+      document.getElementById("stat-subs").textContent = d.active_subscriptions;
+      document.getElementById("stat-subs-sub").textContent = `${d.pending_payments} payments pending`;
+      document.getElementById("stat-tenants").textContent = d.total_tenants;
+      document.getElementById("stat-tenants-sub").textContent = `${d.active_tenants} currently active`;
+
+      // Chart
+      const chart = document.getElementById("revenue-chart");
+      const maxVal = Math.max(...d.daily_revenue.map(r => r.amount), 1);
+      chart.innerHTML = d.daily_revenue.map(r => {
+        const pct = Math.max((r.amount / maxVal) * 100, 3);
+        const dayLabel = new Date(r.date).toLocaleDateString("en-GB", { weekday: "short" });
+        return `<div class="chart-bar-wrapper"><div class="chart-bar" style="height:${pct}%"><div class="chart-tooltip">KES ${formatKES(r.amount)}</div></div><div class="chart-label">${esc(dayLabel)}</div></div>`;
+      }).join("");
+
+      // Recent payments
+      const tbody = document.getElementById("recent-payments-list");
+      tbody.innerHTML = d.recent_payments.length === 0
+        ? '<tr><td colspan="5" class="table-empty">No payments yet</td></tr>'
+        : d.recent_payments.map(p => `<tr>
+            <td>${esc(p.tenant_name)}</td>
+            <td>KES ${formatKES(p.amount)}</td>
+            <td>${statusBadge(p.status)}</td>
+            <td>${esc(p.mpesa_code || "N/A")}</td>
+            <td>${formatDate(p.created_at)}</td>
+          </tr>`).join("");
     }
 
+    function statusBadge(status) {
+      const map = { confirmed: "badge-success", pending: "badge-warning", failed: "badge-danger", expired: "badge-gray" };
+      return `<span class="badge ${map[status] || 'badge-gray'}">${esc(status)}</span>`;
+    }
+
+    // --- Packages ---
     async function loadPackages() {
-      const res = await fetch(`${API}/packages/`);
+      const res = await apiCall(`${API}/packages/`);
+      if (!res) return;
       const data = await res.json();
       const tbody = document.getElementById("package-list");
-      tbody.innerHTML = "";
-      data.forEach(p => {
-        const durLabel = p.duration_type === "minutes" ? `${p.duration_days} min` : `${p.duration_days} days`;
-        tbody.innerHTML += `
-          <tr>
-            <td>${p.name}</td>
-            <td>${durLabel}</td>
-            <td>KES ${p.price}</td>
+      tbody.innerHTML = data.length === 0
+        ? '<tr><td colspan="4" class="table-empty">No packages yet. Create your first package.</td></tr>'
+        : data.map(p => {
+          const dur = p.duration_type === "minutes" ? `${p.duration_days} min` : `${p.duration_days} days`;
+          return `<tr>
+            <td><strong>${esc(p.name)}</strong></td>
+            <td>${esc(dur)}</td>
+            <td>KES ${formatKES(p.price)}</td>
             <td>
-              <button class="warning small" onclick="openEdit(${p.id}, '${p.name}', ${p.duration_days}, ${p.price}, '${p.duration_type}')">Edit</button>
-              <button class="danger small" onclick="deletePackage(${p.id})">Delete</button>
+              <div class="btn-group">
+                <button class="btn btn-outline btn-sm" onclick="openEditPackage(${p.id}, '${esc(p.name)}', ${p.duration_days}, ${p.price}, '${p.duration_type}')">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deletePackage(${p.id})">Delete</button>
+              </div>
             </td>
           </tr>`;
-      });
+        }).join("");
     }
 
-    async function addPackage() {
-      const name = document.getElementById("p-name").value;
-      const duration = document.getElementById("p-duration").value;
-      const price = document.getElementById("p-price").value;
-      const type = document.getElementById("p-type").value;
-      if (!name || !duration || !price) { alert("Fill in all fields."); return; }
-      const res = await fetch(`${API}/packages/`, {
-        method: "POST",
-        headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ name, duration_days: Number(duration), price: Number(price), duration_type: type })
-      });
-      if (handleAuthError(res)) return;
-      document.getElementById("p-name").value = "";
-      document.getElementById("p-duration").value = "";
-      document.getElementById("p-price").value = "";
+    function openAddPackageModal() {
+      document.getElementById("package-modal-title").textContent = "Add Package";
+      document.getElementById("pkg-edit-id").value = "";
+      document.getElementById("pkg-name").value = "";
+      document.getElementById("pkg-duration").value = "";
+      document.getElementById("pkg-price").value = "";
+      document.getElementById("pkg-type").value = "days";
+      openModal("package-modal");
+    }
+
+    function openEditPackage(id, name, duration, price, type) {
+      document.getElementById("package-modal-title").textContent = "Edit Package";
+      document.getElementById("pkg-edit-id").value = id;
+      document.getElementById("pkg-name").value = name;
+      document.getElementById("pkg-duration").value = duration;
+      document.getElementById("pkg-price").value = price;
+      document.getElementById("pkg-type").value = type;
+      openModal("package-modal");
+    }
+
+    function updatePkgRange() {
+      const type = document.getElementById("pkg-type").value;
+      const input = document.getElementById("pkg-duration");
+      input.max = type === "minutes" ? 1440 : 365;
+      input.placeholder = type === "minutes" ? "e.g. 30" : "e.g. 7";
+    }
+
+    async function savePackage() {
+      const id = document.getElementById("pkg-edit-id").value;
+      const name = document.getElementById("pkg-name").value;
+      const duration = document.getElementById("pkg-duration").value;
+      const price = document.getElementById("pkg-price").value;
+      const type = document.getElementById("pkg-type").value;
+      if (!name || !duration || !price) { toast("Fill in all fields.", "error"); return; }
+      const body = JSON.stringify({ name, duration_days: Number(duration), price: Number(price), duration_type: type });
+      const url = id ? `${API}/packages/${id}` : `${API}/packages/`;
+      const method = id ? "PUT" : "POST";
+      const res = await apiCall(url, { method, headers: { ...authHeaders(), "Content-Type": "application/json" }, body });
+      if (!res) return;
+      if (!res.ok) { const err = await res.json().catch(() => ({})); toast(err.detail || "Failed to save package.", "error"); return; }
+      closeModal("package-modal");
+      toast(id ? "Package updated" : "Package created");
       loadPackages();
     }
 
     async function deletePackage(id) {
       if (!confirm("Delete this package?")) return;
-      const res = await fetch(`${API}/packages/${id}`, { method: "DELETE", headers: authHeaders() });
-      if (handleAuthError(res)) return;
+      const res = await apiCall(`${API}/packages/${id}`, { method: "DELETE", headers: authHeaders() });
+      if (!res) return;
+      if (!res.ok) { toast("Failed to delete package.", "error"); return; }
+      toast("Package deleted");
       loadPackages();
     }
 
-    function openEdit(id, name, duration, price, type) {
-      document.getElementById("edit-id").value = id;
-      document.getElementById("edit-name").value = name;
-      document.getElementById("edit-duration").value = duration;
-      document.getElementById("edit-price").value = price;
-      document.getElementById("edit-type").value = type;
-      document.getElementById("edit-modal").classList.add("open");
-    }
-
-    function closeModal() {
-      document.getElementById("edit-modal").classList.remove("open");
-    }
-
-    async function saveEdit() {
-      const id = document.getElementById("edit-id").value;
-      const name = document.getElementById("edit-name").value;
-      const duration = document.getElementById("edit-duration").value;
-      const price = document.getElementById("edit-price").value;
-      const type = document.getElementById("edit-type").value;
-      const res = await fetch(`${API}/packages/${id}`, {
-        method: "PUT",
-        headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ name, duration_days: Number(duration), price: Number(price), duration_type: type })
-      });
-      if (handleAuthError(res)) return;
-      closeModal();
-      loadPackages();
-    }
-
+    // --- Tenants ---
     async function loadTenants() {
-      const res = await fetch(`${API}/tenants/`);
+      const search = document.getElementById("tenant-search").value;
+      const offset = tenantsPage * PAGE_SIZE;
+      const res = await apiCall(`${API}/tenants/?search=${encodeURIComponent(search)}&limit=${PAGE_SIZE}&offset=${offset}`, { headers: authHeaders() });
+      if (!res) return;
       const data = await res.json();
       const tbody = document.getElementById("tenant-list");
-      tbody.innerHTML = "";
-      data.forEach(t => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${t.name}</td>
-            <td>${t.phone}</td>
-            <td>${t.router_name}</td>
-            <td><span class="badge ${t.is_active ? 'active' : 'inactive'}">${t.is_active ? 'Active' : 'Inactive'}</span></td>
-            <td>
-              <button class="${t.is_active ? 'danger' : ''} small" onclick="toggleTenant(${t.id}, ${!t.is_active})">
-                ${t.is_active ? 'Disable' : 'Enable'}
-              </button>
-              <button class="danger small" onclick="deleteTenant(${t.id})">Delete</button>
-            </td>
-          </tr>`;
-      });
+      if (data.items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="table-empty">No tenants found</td></tr>';
+      } else {
+        tbody.innerHTML = data.items.map(t => `<tr>
+          <td><strong>${esc(t.name)}</strong></td>
+          <td>${esc(t.phone)}</td>
+          <td>${esc(t.router_name)}</td>
+          <td>${t.subscription_end ? `<span class="badge badge-info">Until ${formatDate(t.subscription_end)}</span>` : '<span class="badge badge-gray">None</span>'}</td>
+          <td>${t.is_active ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-danger">Inactive</span>'}</td>
+          <td>
+            <div class="btn-group">
+              <button class="btn btn-outline btn-sm" onclick="openEditTenant(${t.id}, '${esc(t.name)}', '${esc(t.phone)}', '${esc(t.router_name)}')">Edit</button>
+              <button class="btn ${t.is_active ? 'btn-danger' : 'btn-success'} btn-sm" onclick="toggleTenant(${t.id}, ${!t.is_active})">${t.is_active ? 'Disable' : 'Enable'}</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteTenant(${t.id})">Delete</button>
+            </div>
+          </td>
+        </tr>`).join("");
+      }
+      renderPagination("tenants-pagination", data.total, tenantsPage, p => { tenantsPage = p; loadTenants(); });
+    }
+
+    const debouncedLoadTenants = debounce(() => { tenantsPage = 0; loadTenants(); });
+
+    function openEditTenant(id, name, phone, router) {
+      document.getElementById("tenant-edit-id").value = id;
+      document.getElementById("tenant-edit-name").value = name;
+      document.getElementById("tenant-edit-phone").value = phone;
+      document.getElementById("tenant-edit-router").value = router;
+      openModal("tenant-modal");
+    }
+
+    async function saveTenant() {
+      const id = document.getElementById("tenant-edit-id").value;
+      const name = document.getElementById("tenant-edit-name").value;
+      const phone = document.getElementById("tenant-edit-phone").value;
+      const router_name = document.getElementById("tenant-edit-router").value;
+      if (!name || !phone) { toast("Name and phone are required.", "error"); return; }
+      const res = await apiCall(`${API}/tenants/${id}`, { method: "PUT", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ name, phone, router_name }) });
+      if (!res) return;
+      if (!res.ok) { const err = await res.json().catch(() => ({})); toast(err.detail || "Failed to update tenant.", "error"); return; }
+      closeModal("tenant-modal");
+      toast("Tenant updated");
+      loadTenants();
     }
 
     async function toggleTenant(id, status) {
-      const res = await fetch(`${API}/tenants/${id}/toggle?status=${status}`, { method: "PUT", headers: authHeaders() });
-      if (handleAuthError(res)) return;
+      const res = await apiCall(`${API}/tenants/${id}/toggle?status=${status}`, { method: "PUT", headers: authHeaders() });
+      if (!res) return;
+      toast(status ? "Tenant enabled" : "Tenant disabled");
       loadTenants();
     }
 
     async function deleteTenant(id) {
-      if (!confirm("Delete this tenant?")) return;
-      const res = await fetch(`${API}/tenants/${id}`, { method: "DELETE", headers: authHeaders() });
-      if (handleAuthError(res)) return;
+      if (!confirm("Delete this tenant? This cannot be undone.")) return;
+      const res = await apiCall(`${API}/tenants/${id}`, { method: "DELETE", headers: authHeaders() });
+      if (!res) return;
+      toast("Tenant deleted");
       loadTenants();
     }
 
+    function exportTenants() {
+      exportTableCSV("tenant-list", ["Name","Phone","Router","Subscription","Status"], "tenants.csv");
+    }
+
+    // --- Subscriptions ---
+    async function loadSubscriptions() {
+      const search = document.getElementById("sub-search").value;
+      const offset = subsPage * PAGE_SIZE;
+      let url = `${API}/subscriptions/?search=${encodeURIComponent(search)}&limit=${PAGE_SIZE}&offset=${offset}`;
+      if (subActiveFilter === "active") url += "&active_only=true";
+      const res = await apiCall(url, { headers: authHeaders() });
+      if (!res) return;
+      const data = await res.json();
+      const tbody = document.getElementById("subscription-list");
+      if (data.items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="table-empty">No subscriptions found</td></tr>';
+      } else {
+        tbody.innerHTML = data.items.map(s => `<tr>
+          <td><strong>${esc(s.tenant_name)}</strong></td>
+          <td>${esc(s.tenant_phone)}</td>
+          <td>${esc(s.package_name)}</td>
+          <td>KES ${formatKES(s.package_price)}</td>
+          <td>${formatDate(s.start_date)}</td>
+          <td>${formatDate(s.end_date)}</td>
+          <td>${s.is_active ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-gray">Expired</span>'}</td>
+        </tr>`).join("");
+      }
+      renderPagination("subs-pagination", data.total, subsPage, p => { subsPage = p; loadSubscriptions(); });
+    }
+
+    const debouncedLoadSubscriptions = debounce(() => { subsPage = 0; loadSubscriptions(); });
+
+    function setSubFilter(val) {
+      subActiveFilter = val;
+      document.getElementById("sub-filter-all").classList.toggle("btn-primary", val === "");
+      document.getElementById("sub-filter-all").classList.toggle("btn-outline", val !== "");
+      document.getElementById("sub-filter-active").classList.toggle("btn-primary", val === "active");
+      document.getElementById("sub-filter-active").classList.toggle("btn-outline", val !== "active");
+      subsPage = 0;
+      loadSubscriptions();
+    }
+
+    // --- Payments ---
     async function loadPayments() {
-      const res = await fetch(`${API}/payments/all`, { headers: authHeaders() });
-      if (handleAuthError(res)) return;
+      const search = document.getElementById("payment-search").value;
+      const offset = paymentsPage * PAGE_SIZE;
+      let url = `${API}/payments/all?search=${encodeURIComponent(search)}&limit=${PAGE_SIZE}&offset=${offset}`;
+      if (paymentStatusFilter) url += `&status_filter=${paymentStatusFilter}`;
+      const res = await apiCall(url, { headers: authHeaders() });
+      if (!res) return;
       const data = await res.json();
       const tbody = document.getElementById("payment-list");
-      tbody.innerHTML = "";
-      data.forEach(p => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${p.tenant_name}</td>
-            <td>KES ${p.amount}</td>
-            <td>${p.mpesa_code || 'N/A'}</td>
-            <td><span class="badge ${p.status === 'confirmed' ? 'active' : 'inactive'}">${p.status}</span></td>
-            <td>${new Date(p.created_at).toLocaleDateString()}</td>
-          </tr>`;
+      if (data.items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="table-empty">No payments found</td></tr>';
+      } else {
+        tbody.innerHTML = data.items.map(p => `<tr>
+          <td><strong>${esc(p.tenant_name)}</strong></td>
+          <td>KES ${formatKES(p.amount)}</td>
+          <td>${esc(p.mpesa_code || "N/A")}</td>
+          <td>${statusBadge(p.status)}</td>
+          <td>${formatDate(p.created_at)}</td>
+        </tr>`).join("");
+      }
+      renderPagination("payments-pagination", data.total, paymentsPage, p => { paymentsPage = p; loadPayments(); });
+    }
+
+    const debouncedLoadPayments = debounce(() => { paymentsPage = 0; loadPayments(); });
+
+    function setPaymentFilter(val) {
+      paymentStatusFilter = val;
+      paymentsPage = 0;
+      loadPayments();
+    }
+
+    function exportPayments() {
+      exportTableCSV("payment-list", ["Tenant","Amount","M-Pesa Code","Status","Date"], "payments.csv");
+    }
+
+    // --- Users ---
+    async function loadUsers() {
+      const res = await apiCall(`${API}/users/`, { headers: authHeaders() });
+      if (!res) return;
+      const data = await res.json();
+      const tbody = document.getElementById("user-list");
+      tbody.innerHTML = data.map(u => `<tr>
+        <td><strong>${esc(u.username)}</strong></td>
+        <td><span class="badge badge-info">${esc(u.role)}</span></td>
+        <td>${u.is_active ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-danger">Inactive</span>'}</td>
+        <td>${formatDate(u.created_at)}</td>
+        <td>
+          <div class="btn-group">
+            <button class="btn btn-outline btn-sm" onclick="openEditUser(${u.id}, '${esc(u.username)}', '${esc(u.role)}')">Edit</button>
+            <button class="btn ${u.is_active ? 'btn-danger' : 'btn-success'} btn-sm" onclick="toggleUser(${u.id}, ${!u.is_active})">${u.is_active ? 'Disable' : 'Enable'}</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">Delete</button>
+          </div>
+        </td>
+      </tr>`).join("");
+    }
+
+    function openAddUserModal() {
+      document.getElementById("user-modal-title").textContent = "Add User";
+      document.getElementById("user-edit-id").value = "";
+      document.getElementById("user-username").value = "";
+      document.getElementById("user-password").value = "";
+      document.getElementById("user-role").value = "admin";
+      document.getElementById("user-pw-group").style.display = "block";
+      openModal("user-modal");
+    }
+
+    function openEditUser(id, username, role) {
+      document.getElementById("user-modal-title").textContent = "Edit User";
+      document.getElementById("user-edit-id").value = id;
+      document.getElementById("user-username").value = username;
+      document.getElementById("user-password").value = "";
+      document.getElementById("user-role").value = role;
+      document.getElementById("user-pw-group").style.display = "none";
+      openModal("user-modal");
+    }
+
+    async function saveUser() {
+      const id = document.getElementById("user-edit-id").value;
+      const username = document.getElementById("user-username").value;
+      const password = document.getElementById("user-password").value;
+      const role = document.getElementById("user-role").value;
+      if (!username) { toast("Username is required.", "error"); return; }
+      if (!id && !password) { toast("Password is required for new users.", "error"); return; }
+      let url, method, body;
+      if (id) {
+        url = `${API}/users/${id}`;
+        method = "PUT";
+        body = JSON.stringify({ username, role });
+      } else {
+        url = `${API}/users/`;
+        method = "POST";
+        body = JSON.stringify({ username, password, role });
+      }
+      const res = await apiCall(url, { method, headers: { ...authHeaders(), "Content-Type": "application/json" }, body });
+      if (!res) return;
+      if (!res.ok) { const err = await res.json().catch(() => ({})); toast(err.detail || "Failed to save user.", "error"); return; }
+      closeModal("user-modal");
+      toast(id ? "User updated" : "User created");
+      loadUsers();
+    }
+
+    async function toggleUser(id, isActive) {
+      const res = await apiCall(`${API}/users/${id}`, { method: "PUT", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ is_active: isActive }) });
+      if (!res) return;
+      if (!res.ok) { const err = await res.json().catch(() => ({})); toast(err.detail || "Failed.", "error"); return; }
+      toast(isActive ? "User enabled" : "User disabled");
+      loadUsers();
+    }
+
+    async function deleteUser(id) {
+      if (!confirm("Delete this user?")) return;
+      const res = await apiCall(`${API}/users/${id}`, { method: "DELETE", headers: authHeaders() });
+      if (!res) return;
+      if (!res.ok) { const err = await res.json().catch(() => ({})); toast(err.detail || "Cannot delete user.", "error"); return; }
+      toast("User deleted");
+      loadUsers();
+    }
+
+    // --- Settings ---
+    async function loadSettings() {
+      const res = await apiCall(`${API}/organizations/profile`, { headers: authHeaders() });
+      if (!res) return;
+      const data = await res.json();
+      document.getElementById("org-name").value = data.name || "";
+      document.getElementById("org-slug").value = data.slug || "";
+    }
+
+    async function saveOrgProfile() {
+      const name = document.getElementById("org-name").value;
+      if (!name) { toast("Organization name is required.", "error"); return; }
+      const res = await apiCall(`${API}/organizations/profile`, { method: "PUT", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+      if (!res) return;
+      if (!res.ok) { const err = await res.json().catch(() => ({})); toast(err.detail || "Failed to save.", "error"); return; }
+      toast("Organization updated");
+    }
+
+    async function changePassword() {
+      const current = document.getElementById("pw-current").value;
+      const newPw = document.getElementById("pw-new").value;
+      const confirm = document.getElementById("pw-confirm").value;
+      if (!current || !newPw) { toast("Fill in all password fields.", "error"); return; }
+      if (newPw !== confirm) { toast("New passwords don't match.", "error"); return; }
+      if (newPw.length < 6) { toast("Password must be at least 6 characters.", "error"); return; }
+      const res = await apiCall(`${API}/users/me/password`, { method: "PUT", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ current_password: current, new_password: newPw }) });
+      if (!res) return;
+      if (!res.ok) { const err = await res.json().catch(() => ({})); toast(err.detail || "Failed to change password.", "error"); return; }
+      toast("Password updated");
+      document.getElementById("pw-current").value = "";
+      document.getElementById("pw-new").value = "";
+      document.getElementById("pw-confirm").value = "";
+    }
+
+    // --- Pagination ---
+    function renderPagination(containerId, total, currentPage, onPageChange) {
+      const container = document.getElementById(containerId);
+      const totalPages = Math.ceil(total / PAGE_SIZE);
+      if (totalPages <= 1) { container.innerHTML = `<div>Showing ${total} result${total !== 1 ? 's' : ''}</div><div></div>`; return; }
+      const start = currentPage * PAGE_SIZE + 1;
+      const end = Math.min((currentPage + 1) * PAGE_SIZE, total);
+      let buttons = "";
+      const pages = [];
+      for (let i = 0; i < totalPages; i++) {
+        if (i === 0 || i === totalPages - 1 || Math.abs(i - currentPage) <= 1) { pages.push(i); }
+        else if (pages[pages.length - 1] !== -1) { pages.push(-1); }
+      }
+      buttons += `<button ${currentPage === 0 ? "disabled" : ""} onclick="void 0" class="pg-prev">&laquo;</button>`;
+      pages.forEach(p => {
+        if (p === -1) buttons += `<button disabled>...</button>`;
+        else buttons += `<button class="${p === currentPage ? 'active' : ''}" onclick="void 0" data-page="${p}">${p + 1}</button>`;
       });
+      buttons += `<button ${currentPage === totalPages - 1 ? "disabled" : ""} onclick="void 0" class="pg-next">&raquo;</button>`;
+      container.innerHTML = `<div>Showing ${start}-${end} of ${total}</div><div class="pagination-buttons">${buttons}</div>`;
+      container.querySelectorAll("[data-page]").forEach(btn => btn.addEventListener("click", () => onPageChange(Number(btn.dataset.page))));
+      container.querySelector(".pg-prev")?.addEventListener("click", () => { if (currentPage > 0) onPageChange(currentPage - 1); });
+      container.querySelector(".pg-next")?.addEventListener("click", () => { if (currentPage < totalPages - 1) onPageChange(currentPage + 1); });
+    }
+
+    // --- CSV Export ---
+    function exportTableCSV(tbodyId, headers, filename) {
+      const rows = document.getElementById(tbodyId).querySelectorAll("tr");
+      let csv = headers.join(",") + "\n";
+      rows.forEach(row => {
+        const cells = row.querySelectorAll("td");
+        if (cells.length === 0) return;
+        const vals = Array.from(cells).map(c => `"${c.textContent.trim().replace(/"/g, '""')}"`);
+        csv += vals.join(",") + "\n";
+      });
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
     }
   </script>
 </body>

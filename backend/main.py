@@ -1,17 +1,19 @@
 import os
 import logging
+import uuid
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
+from starlette.middleware.base import BaseHTTPMiddleware
 from dotenv import load_dotenv
 
 import crud
 from database import Base, SessionLocal, engine
 from models import Organization, User
-from routes import auth, packages, payments, subscriptions, tenants
+from routes import auth, dashboard, organizations, packages, payments, subscriptions, tenants, users
 from routes.auth import hash_password
 
 load_dotenv()
@@ -50,10 +52,57 @@ def bootstrap():
 def run_jobs():
     db = SessionLocal()
     try:
-        crud.expire_subscriptions(db)
+        expired = crud.expire_subscriptions(db)
         crud.cleanup_stale_payments(db)
+        if expired:
+            _send_expiry_reminders(db)
     finally:
         db.close()
+
+
+def _send_expiry_reminders(db):
+    try:
+        if not os.getenv("TWILIO_ACCOUNT_SID"):
+            return
+        from notifications import send_expiry_reminder
+        portal_url = os.getenv("PORTAL_URL", "")
+        for sub in crud.get_expiring_soon(db, organization_id=None, days=1):
+            tenant = db.query(crud.Tenant).filter(crud.Tenant.id == sub.tenant_id).first()
+            if tenant:
+                send_expiry_reminder(tenant.name, tenant.phone, 1, portal_url)
+    except Exception:
+        logger.exception("Failed to send expiry reminders")
+
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        request.state.request_id = request_id
+        response: Response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
+RATE_LIMIT_STORE: dict[str, list[float]] = {}
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        import time
+        if request.url.path in ("/health", "/docs", "/openapi.json"):
+            return await call_next(request)
+        client_ip = request.client.host if request.client else "unknown"
+        now = time.time()
+        window = 60
+        max_requests = int(os.getenv("RATE_LIMIT_PER_MINUTE", "120"))
+        timestamps = RATE_LIMIT_STORE.get(client_ip, [])
+        timestamps = [t for t in timestamps if now - t < window]
+        if len(timestamps) >= max_requests:
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"detail": "Too many requests"}, status_code=429)
+        timestamps.append(now)
+        RATE_LIMIT_STORE[client_ip] = timestamps
+        return await call_next(request)
 
 
 @asynccontextmanager
@@ -68,19 +117,27 @@ async def lifespan(app: FastAPI):
         scheduler.shutdown(wait=False)
 
 
-app = FastAPI(title="Hotspot Billing SaaS", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Hotspot Billing SaaS", version="2.0.0", lifespan=lifespan)
+
+app.add_middleware(RequestIDMiddleware)
+app.add_middleware(RateLimitMiddleware)
+
 origins = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "*").split(",") if origin.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"])
+
 app.include_router(auth.router)
+app.include_router(dashboard.router)
 app.include_router(tenants.router)
 app.include_router(packages.router)
 app.include_router(payments.router)
 app.include_router(subscriptions.router)
+app.include_router(users.router)
+app.include_router(organizations.router)
 
 
 @app.get("/")
 def root():
-    return {"name": "Hotspot Billing SaaS", "status": "ok", "docs": "/docs"}
+    return {"name": "Hotspot Billing SaaS", "version": "2.0.0", "status": "ok", "docs": "/docs"}
 
 
 @app.get("/health")

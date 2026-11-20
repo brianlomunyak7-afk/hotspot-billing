@@ -11,7 +11,7 @@ class Tenant(Base):
     phone = Column(String, nullable=False)
     router_name = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
-    hotspot_password = Column(String, nullable=True)   # <-- ADD THIS
+    hotspot_password = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     subscriptions = relationship("Subscription", back_populates="tenant")
     organization = relationship("Organization", back_populates="tenants")
