@@ -8,6 +8,14 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: backend
+      DATABASE_URL: sqlite:///./test_hotspot.db
+      SECRET_KEY: test-secret-key-for-testing-only
+      ADMIN_USERNAME: testadmin
+      ADMIN_PASSWORD: testpass123
+      ENABLE_SCHEDULER: "false"
+      RATE_LIMIT_PER_MINUTE: "9999"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
