@@ -2,84 +2,165 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Phantech Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hotspot Portal</title>
   <style>
+    :root {
+      --primary: #0f172a;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #10b981;
+      --danger: #ef4444;
+      --bg: #0f172a;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-secondary: #64748b;
+      --text-muted: #94a3b8;
+      --radius: 12px;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #1a1a2e; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-    .card { background: white; border-radius: 12px; padding: 32px; width: 100%; max-width: 440px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-    h2 { text-align: center; margin-bottom: 6px; color: #1a1a2e; }
-    p.sub { text-align: center; color: #888; margin-bottom: 24px; font-size: 14px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, var(--bg) 0%, #1e3a5f 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .card { background: var(--card); border-radius: 16px; padding: 32px; width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    h2 { text-align: center; margin-bottom: 4px; color: var(--primary); font-size: 22px; }
+    .sub { text-align: center; color: var(--text-secondary); margin-bottom: 24px; font-size: 14px; }
     .step { display: none; }
     .step.active { display: block; }
-    input { padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; width: 100%; margin-bottom: 14px; font-size: 15px; }
-    button { padding: 12px; background: #1a1a2e; color: white; border: none; border-radius: 8px; width: 100%; font-size: 15px; cursor: pointer; margin-bottom: 10px; }
-    button.secondary { background: #eee; color: #333; }
+    input { padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; width: 100%; margin-bottom: 14px; font-size: 15px; font-family: inherit; color: var(--text); }
+    input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    input::placeholder { color: var(--text-muted); }
+    button { padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; width: 100%; font-size: 15px; font-weight: 600; cursor: pointer; margin-bottom: 10px; font-family: inherit; transition: background 0.2s; }
+    button:hover { background: var(--accent-hover); }
+    button:active { transform: scale(0.98); }
+    button.secondary { background: #f1f5f9; color: var(--text); }
+    button.secondary:hover { background: #e2e8f0; }
     .package-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-    .package-item { border: 2px solid #eee; border-radius: 8px; padding: 16px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; }
-    .package-item:hover { border-color: #1a1a2e; background: #f9f9ff; }
-    .package-item h4 { margin-bottom: 4px; font-size: 16px; }
-    .package-item span { color: #888; font-size: 13px; }
-    .package-price { font-size: 18px; font-weight: bold; color: #1a1a2e; }
-    .info-box { background: #f4f4f4; border-radius: 8px; padding: 14px; margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
-    .spinner { width: 80px; height: 80px; border: 6px solid #eee; border-top: 6px solid #1a1a2e; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .status-msg { text-align: center; margin-top: 20px; font-size: 14px; color: #555; min-height: 40px; }
+    .package-item { border: 2px solid var(--border); border-radius: var(--radius); padding: 16px 20px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center; }
+    .package-item:hover { border-color: var(--accent); background: #f8fafc; transform: translateY(-1px); }
+    .package-item h4 { margin-bottom: 2px; font-size: 16px; color: var(--text); }
+    .package-item span { color: var(--text-muted); font-size: 13px; }
+    .package-price { font-size: 20px; font-weight: 700; color: var(--accent); }
+    .info-box { background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
+    .info-box strong { color: var(--text); }
+
+    /* Tabs */
+    .portal-tabs { display: flex; background: #f1f5f9; border-radius: 10px; padding: 4px; margin-bottom: 24px; }
+    .portal-tab { flex: 1; text-align: center; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--text-secondary); transition: all 0.2s; }
+    .portal-tab.active { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    /* Spinner */
+    .spinner { width: 64px; height: 64px; border: 4px solid var(--border); border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status-msg { text-align: center; margin-top: 20px; font-size: 14px; color: var(--text-secondary); }
+
+    /* Status check result */
+    .status-result { text-align: center; padding: 20px 0; }
+    .status-icon { font-size: 48px; margin-bottom: 12px; }
+    .status-result h3 { font-size: 18px; margin-bottom: 8px; }
+    .status-result p { color: var(--text-secondary); font-size: 14px; }
+    .status-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; margin: 12px 0; }
+    .status-badge.active { background: #d1fae5; color: #065f46; }
+    .status-badge.inactive { background: #fee2e2; color: #991b1b; }
+
+    /* Success receipt */
+    .success-icon { width: 72px; height: 72px; background: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    .success-icon svg { width: 36px; height: 36px; fill: none; stroke: white; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .error-icon { width: 72px; height: 72px; background: var(--danger); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    .error-icon svg { width: 36px; height: 36px; fill: none; stroke: white; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .credentials-box { background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius); padding: 16px; margin-top: 16px; text-align: center; }
+    .credentials-box .label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .credentials-box .value { font-size: 18px; font-weight: 700; color: var(--text); font-family: monospace; }
+    .credentials-row { display: flex; gap: 12px; margin-top: 8px; }
+    .credentials-row > div { flex: 1; }
   </style>
 </head>
 <body>
 <div class="card">
 
-  <div id="step-packages" class="step active">
-    <h2>Phantech Internet</h2>
-    <p class="sub">Select a package to get started</p>
-    <div class="package-list" id="package-list"></div>
+  <!-- TAB BAR -->
+  <div class="portal-tabs" id="portal-tabs">
+    <div class="portal-tab active" onclick="switchPortalTab('buy')">Buy Internet</div>
+    <div class="portal-tab" onclick="switchPortalTab('status')">Check Status</div>
   </div>
 
-  <div id="step-phone" class="step">
-    <h2>Enter Your Number</h2>
-    <p class="sub">We'll send an M-Pesa prompt to this number</p>
-    <div class="info-box" id="selected-package-summary"></div>
-    <input id="phone" placeholder="Phone Number (07XXXXXXXX)" type="tel" />
-    <button onclick="proceedToPayment()">Confirm & Pay</button>
-    <button class="secondary" onclick="goTo('step-packages')">Back</button>
-  </div>
-
-  <div id="step-waiting" class="step">
-    <h2>Check Your Phone</h2>
-    <p class="sub">Enter your M-Pesa PIN to complete payment</p>
-    <div style="margin: 30px 0;">
-      <div class="spinner"></div>
-      <div class="status-msg" id="status-msg">Waiting for payment... <span id="countdown">60</span>s</div>
+  <!-- BUY FLOW -->
+  <div id="buy-flow">
+    <div id="step-packages" class="step active">
+      <h2>Select a Package</h2>
+      <p class="sub">Choose your internet plan</p>
+      <div class="package-list" id="package-list"></div>
     </div>
-    <button class="secondary" onclick="cancelPayment()">Cancel</button>
-  </div>
 
-  <div id="step-processing" class="step">
-    <h2>Processing...</h2>
-    <p class="sub">Please wait a moment</p>
-    <div style="margin: 30px 0;">
-      <div class="spinner"></div>
-      <div class="status-msg">Payment received. Connecting you to the internet...</div>
+    <div id="step-phone" class="step">
+      <h2>Enter Your Number</h2>
+      <p class="sub">We'll send an M-Pesa prompt to this number</p>
+      <div class="info-box" id="selected-package-summary"></div>
+      <input id="phone" placeholder="Phone Number (07XXXXXXXX)" type="tel" maxlength="15" />
+      <button onclick="proceedToPayment()">Confirm &amp; Pay</button>
+      <button class="secondary" onclick="goTo('step-packages')">Back</button>
+    </div>
+
+    <div id="step-waiting" class="step">
+      <h2>Check Your Phone</h2>
+      <p class="sub">Enter your M-Pesa PIN to complete payment</p>
+      <div style="margin: 30px 0;">
+        <div class="spinner"></div>
+        <div class="status-msg">Waiting for payment... <span id="countdown">60</span>s</div>
+      </div>
+      <button class="secondary" onclick="cancelPayment()">Cancel</button>
+    </div>
+
+    <div id="step-processing" class="step">
+      <h2>Processing...</h2>
+      <p class="sub">Please wait a moment</p>
+      <div style="margin: 30px 0;">
+        <div class="spinner"></div>
+        <div class="status-msg">Payment received. Connecting you to the internet...</div>
+      </div>
+    </div>
+
+    <div id="step-success" class="step">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </div>
+      <h2>You're Online!</h2>
+      <p class="sub">Payment confirmed</p>
+      <div class="info-box" id="success-summary"></div>
+      <div class="credentials-box">
+        <div class="label">WiFi Login Credentials</div>
+        <div class="credentials-row">
+          <div><div class="label">Username</div><div class="value" id="cred-user"></div></div>
+          <div><div class="label">Password</div><div class="value" id="cred-pass"></div></div>
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:8px">Connect to the hotspot network, open your browser, and enter these credentials.</p>
+      </div>
+      <button style="margin-top:16px" onclick="window.location.href='http://google.com'">Start Browsing</button>
+    </div>
+
+    <div id="step-error" class="step">
+      <div class="error-icon">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </div>
+      <h2>Payment Failed</h2>
+      <p class="sub" id="error-msg">Something went wrong. Please try again.</p>
+      <button onclick="resetPortal()">Try Again</button>
     </div>
   </div>
 
-  <div id="step-success" class="step">
-    <div style="text-align:center; font-size:64px; margin-bottom:16px;">✓</div>
-    <h2>You're Online!</h2>
-    <p class="sub">Payment confirmed</p>
-    <div class="info-box" id="success-summary"></div>
-    <button onclick="window.location.href='http://google.com'">Start Browsing</button>
-  </div>
-
-  <div id="step-error" class="step">
-    <div style="text-align:center; font-size:64px; margin-bottom:16px;">✗</div>
-    <h2>Payment Failed</h2>
-    <p class="sub" id="error-msg">Something went wrong. Please try again.</p>
-    <button onclick="resetPortal()">Try Again</button>
+  <!-- STATUS CHECK -->
+  <div id="status-flow" style="display:none">
+    <div id="status-input" class="step active">
+      <h2>Check Your Status</h2>
+      <p class="sub">Enter your phone number to check your subscription</p>
+      <input id="status-phone" placeholder="Phone Number (07XXXXXXXX)" type="tel" maxlength="15" />
+      <button onclick="checkStatus()">Check Status</button>
+    </div>
+    <div id="status-result" class="step"></div>
   </div>
 
 </div>
 
+<script src="config.js"></script>
 <script>
   const API = window.API_URL || (window.location.port === "8000" ? "" : "/api");
   let selectedPackage = null;
@@ -87,9 +168,36 @@
   let countdownTimer = null;
   let pollInterval = null;
 
+  function esc(str) {
+    if (str == null) return "";
+    const d = document.createElement("div");
+    d.textContent = String(str);
+    return d.innerHTML;
+  }
+
+  function formatDuration(pkg) {
+    if (pkg.duration_type === "minutes") return `${pkg.duration_days} min`;
+    return `${pkg.duration_days} day${pkg.duration_days > 1 ? 's' : ''}`;
+  }
+
   function goTo(stepId) {
-    document.querySelectorAll(".step").forEach(s => s.classList.remove("active"));
+    document.querySelectorAll("#buy-flow .step").forEach(s => s.classList.remove("active"));
     document.getElementById(stepId).classList.add("active");
+  }
+
+  function switchPortalTab(tab) {
+    document.querySelectorAll(".portal-tab").forEach(t => t.classList.remove("active"));
+    if (tab === "buy") {
+      document.querySelectorAll(".portal-tab")[0].classList.add("active");
+      document.getElementById("buy-flow").style.display = "block";
+      document.getElementById("status-flow").style.display = "none";
+    } else {
+      document.querySelectorAll(".portal-tab")[1].classList.add("active");
+      document.getElementById("buy-flow").style.display = "none";
+      document.getElementById("status-flow").style.display = "block";
+      document.getElementById("status-input").classList.add("active");
+      document.getElementById("status-result").classList.remove("active");
+    }
   }
 
   function resetPortal() {
@@ -104,51 +212,39 @@
     goTo("step-packages");
   }
 
-  function cancelPayment() {
-    clearInterval(countdownTimer);
-    clearInterval(pollInterval);
-    countdownTimer = null;
-    pollInterval = null;
-    selectedPackage = null;
-    currentTenant = null;
-    document.getElementById("phone").value = "";
-    loadPackages();
-    goTo("step-packages");
-  }
+  function cancelPayment() { resetPortal(); }
 
   function formatPhone(phone) {
-    phone = phone.trim();
+    phone = phone.trim().replace(/\s+/g, "");
     if (phone.startsWith("0")) return "254" + phone.slice(1);
     if (phone.startsWith("+")) return phone.slice(1);
     return phone;
   }
 
   async function loadPackages() {
-    const res = await fetch(`${API}/packages/`);
-    const packages = await res.json();
-    const list = document.getElementById("package-list");
-    list.innerHTML = "";
-    packages.forEach(p => {
-      const div = document.createElement("div");
-      div.className = "package-item";
-      div.innerHTML = `
-        <div>
-          <h4>${p.name}</h4>
-          <span>${p.duration_days} day(s)</span>
-        </div>
-        <div class="package-price">KES ${p.price}</div>
-      `;
-      div.onclick = () => {
-        selectedPackage = p;
-        document.getElementById("selected-package-summary").innerHTML = `
-          <b>Package:</b> ${p.name}<br>
-          <b>Duration:</b> ${p.duration_days} day(s)<br>
-          <b>Amount:</b> KES ${p.price}
-        `;
-        goTo("step-phone");
-      };
-      list.appendChild(div);
-    });
+    try {
+      const res = await fetch(`${API}/packages/`);
+      const packages = await res.json();
+      const list = document.getElementById("package-list");
+      list.innerHTML = "";
+      if (packages.length === 0) {
+        list.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px">No packages available</p>';
+        return;
+      }
+      packages.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "package-item";
+        div.innerHTML = `<div><h4>${esc(p.name)}</h4><span>${formatDuration(p)}</span></div><div class="package-price">KES ${Number(p.price).toLocaleString()}</div>`;
+        div.onclick = () => {
+          selectedPackage = p;
+          document.getElementById("selected-package-summary").innerHTML = `<strong>Package:</strong> ${esc(p.name)}<br><strong>Duration:</strong> ${formatDuration(p)}<br><strong>Amount:</strong> KES ${Number(p.price).toLocaleString()}`;
+          goTo("step-phone");
+        };
+        list.appendChild(div);
+      });
+    } catch {
+      document.getElementById("package-list").innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px">Unable to load packages. Please refresh.</p>';
+    }
   }
 
   async function proceedToPayment() {
@@ -156,42 +252,43 @@
     if (!raw) { alert("Enter your phone number."); return; }
     const phone = formatPhone(raw);
 
-    const res = await fetch(`${API}/tenants/public?phone=${encodeURIComponent(phone)}`);
-    const tenants = await res.json();
-    const found = tenants && tenants.id ? tenants : null;
+    try {
+      const res = await fetch(`${API}/tenants/public?phone=${encodeURIComponent(phone)}`);
+      const tenants = await res.json();
+      const found = tenants && tenants.id ? tenants : null;
 
-    if (found) {
-      currentTenant = found;
-    } else {
-      const reg = await fetch(`${API}/tenants/`, {
+      if (found) {
+        currentTenant = found;
+      } else {
+        const reg = await fetch(`${API}/tenants/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Guest", phone, router_name: "walkin" })
+        });
+        currentTenant = await reg.json();
+      }
+
+      goTo("step-waiting");
+      startCountdown();
+
+      const stkRes = await fetch(`${API}/payments/stk-push`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "Guest", phone, router_name: "walkin" })
+        body: JSON.stringify({ tenant_id: currentTenant.id, package_id: selectedPackage.id, phone: currentTenant.phone })
       });
-      currentTenant = await reg.json();
-    }
 
-    goTo("step-waiting");
-    startCountdown();
+      const data = await stkRes.json();
 
-    const stkRes = await fetch(`${API}/payments/stk-push`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tenant_id: currentTenant.id,
-        package_id: selectedPackage.id,
-        phone: currentTenant.phone,
-        amount: selectedPackage.price
-      })
-    });
-
-    const data = await stkRes.json();
-
-    if (data.checkout_request_id) {
-      pollPaymentStatus(data.checkout_request_id);
-    } else {
+      if (data.checkout_request_id) {
+        pollPaymentStatus(data.checkout_request_id);
+      } else {
+        clearInterval(countdownTimer);
+        document.getElementById("error-msg").textContent = data.detail || "STK Push failed.";
+        goTo("step-error");
+      }
+    } catch {
       clearInterval(countdownTimer);
-      document.getElementById("error-msg").textContent = data.detail || "STK Push failed.";
+      document.getElementById("error-msg").textContent = "Connection error. Please try again.";
       goTo("step-error");
     }
   }
@@ -221,34 +318,38 @@
     pollInterval = setInterval(async () => {
       if (!pollInterval) return;
       attempts++;
-      const res = await fetch(`${API}/payments/status/${checkoutRequestId}`);
-      const data = await res.json();
+      try {
+        const res = await fetch(`${API}/payments/status/${checkoutRequestId}`);
+        const data = await res.json();
 
-      if (data.status === "confirmed") {
-        clearInterval(pollInterval);
-        clearInterval(countdownTimer);
-        pollInterval = null;
-        countdownTimer = null;
-        goTo("step-processing");
-        setTimeout(() => {
-          document.getElementById("success-summary").innerHTML = `
-            <b>Package:</b> ${selectedPackage.name}<br>
-            <b>Duration:</b> ${selectedPackage.duration_days} day(s)<br>
-            <b>Amount Paid:</b> KES ${selectedPackage.price}<br>
-            <b>M-Pesa Code:</b> ${data.mpesa_code}
-          `;
-          goTo("step-success");
-        }, 3000);
-      }
+        if (data.status === "confirmed") {
+          clearInterval(pollInterval);
+          clearInterval(countdownTimer);
+          pollInterval = null;
+          countdownTimer = null;
+          goTo("step-processing");
+          setTimeout(() => {
+            document.getElementById("success-summary").innerHTML = `
+              <strong>Package:</strong> ${esc(selectedPackage.name)}<br>
+              <strong>Duration:</strong> ${formatDuration(selectedPackage)}<br>
+              <strong>Amount Paid:</strong> KES ${Number(selectedPackage.price).toLocaleString()}<br>
+              <strong>M-Pesa Code:</strong> ${esc(data.mpesa_code)}
+            `;
+            document.getElementById("cred-user").textContent = currentTenant.phone;
+            document.getElementById("cred-pass").textContent = currentTenant.hotspot_password || "N/A";
+            goTo("step-success");
+          }, 2500);
+        }
 
-      if (data.status === "failed") {
-        clearInterval(pollInterval);
-        clearInterval(countdownTimer);
-        pollInterval = null;
-        countdownTimer = null;
-        document.getElementById("error-msg").textContent = "Payment cancelled. Please try again.";
-        goTo("step-error");
-      }
+        if (data.status === "failed") {
+          clearInterval(pollInterval);
+          clearInterval(countdownTimer);
+          pollInterval = null;
+          countdownTimer = null;
+          document.getElementById("error-msg").textContent = "Payment was cancelled or failed. Please try again.";
+          goTo("step-error");
+        }
+      } catch { /* network hiccup — keep polling */ }
 
       if (attempts >= 12) {
         clearInterval(pollInterval);
@@ -259,6 +360,61 @@
         goTo("step-error");
       }
     }, 5000);
+  }
+
+  async function checkStatus() {
+    const raw = document.getElementById("status-phone").value.trim();
+    if (!raw) { alert("Enter your phone number."); return; }
+    const phone = formatPhone(raw);
+    const resultEl = document.getElementById("status-result");
+
+    try {
+      const res = await fetch(`${API}/tenants/public/status?phone=${encodeURIComponent(phone)}`);
+      const data = await res.json();
+
+      document.getElementById("status-input").classList.remove("active");
+      resultEl.classList.add("active");
+
+      if (!data.found) {
+        resultEl.innerHTML = `
+          <div class="status-result">
+            <div class="status-icon">&#128269;</div>
+            <h3>No Account Found</h3>
+            <p>No subscription found for this number. Purchase a package to get started.</p>
+            <button style="margin-top:16px" onclick="switchPortalTab('buy')">Buy a Package</button>
+            <button class="secondary" onclick="switchPortalTab('status')">Check Another Number</button>
+          </div>`;
+      } else if (data.subscription_active) {
+        resultEl.innerHTML = `
+          <div class="status-result">
+            <div class="status-icon" style="color:var(--success)">&#9679;</div>
+            <h3>${esc(data.name)}</h3>
+            <div class="status-badge active">Active Subscription</div>
+            <p>Your subscription is valid until:<br><strong>${new Date(data.subscription_end).toLocaleString()}</strong></p>
+            <button class="secondary" style="margin-top:16px" onclick="switchPortalTab('status')">Check Another Number</button>
+          </div>`;
+      } else {
+        resultEl.innerHTML = `
+          <div class="status-result">
+            <div class="status-icon" style="color:var(--danger)">&#9679;</div>
+            <h3>${esc(data.name)}</h3>
+            <div class="status-badge inactive">No Active Subscription</div>
+            <p>Your subscription has expired. Purchase a new package to reconnect.</p>
+            <button style="margin-top:16px" onclick="switchPortalTab('buy')">Buy a Package</button>
+            <button class="secondary" onclick="switchPortalTab('status')">Check Another Number</button>
+          </div>`;
+      }
+    } catch {
+      resultEl.classList.add("active");
+      document.getElementById("status-input").classList.remove("active");
+      resultEl.innerHTML = `
+        <div class="status-result">
+          <div class="status-icon">&#9888;</div>
+          <h3>Connection Error</h3>
+          <p>Unable to check status. Please try again.</p>
+          <button style="margin-top:16px" onclick="switchPortalTab('status')">Try Again</button>
+        </div>`;
+    }
   }
 
   loadPackages();
