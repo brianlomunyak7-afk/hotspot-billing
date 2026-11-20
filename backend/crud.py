@@ -98,11 +98,16 @@ def create_subscription(db: Session, organization_id: int, tenant_id: int, packa
     return subscription
 
 
-def get_expiring_soon(db: Session, organization_id: int, days: int = 2):
+def get_expiring_soon(db: Session, organization_id: int | None, days: int = 2):
     now = datetime.utcnow()
-    return db.query(Subscription).filter(Subscription.organization_id == organization_id,
-        Subscription.is_active.is_(True), Subscription.end_date <= now + timedelta(days=days),
-        Subscription.end_date >= now).all()
+    q = db.query(Subscription).filter(
+        Subscription.is_active.is_(True),
+        Subscription.end_date <= now + timedelta(days=days),
+        Subscription.end_date >= now,
+    )
+    if organization_id is not None:
+        q = q.filter(Subscription.organization_id == organization_id)
+    return q.all()
 
 
 def expire_subscriptions(db: Session):
@@ -145,16 +150,23 @@ def confirm_payment(db: Session, checkout_request_id: str, mpesa_code: str):
     db.add(Payment(organization_id=pending.organization_id, tenant_id=pending.tenant_id,
                    amount=pending.amount, mpesa_code=mpesa_code, subscription_id=pending.subscription_id))
     db.commit()
-    if subscription and tenant and os.getenv("MIKROTIK_HOST"):
+    if subscription and tenant:
+        if os.getenv("MIKROTIK_ENABLED", "false").lower() == "true":
+            try:
+                from mikrotik import grant_hotspot_user
+                if not grant_hotspot_user(tenant.phone, tenant.hotspot_password or "", subscription.package.duration_days,
+                                          subscription.package.duration_type):
+                    logging.getLogger("hotspot-billing").error("MikroTik provisioning failed after payment confirmation",
+                                                               extra={"tenant_id": tenant.id})
+            except Exception:
+                logging.getLogger("hotspot-billing").exception("MikroTik provisioning error after payment confirmation",
+                                                               extra={"tenant_id": tenant.id})
         try:
-            from mikrotik import grant_hotspot_user
-            if not grant_hotspot_user(tenant.phone, tenant.hotspot_password or "", subscription.package.duration_days,
-                                      subscription.package.duration_type):
-                logging.getLogger("hotspot-billing").error("MikroTik provisioning failed after payment confirmation",
-                                                           extra={"tenant_id": tenant.id})
-        except Exception as exc:
-            logging.getLogger("hotspot-billing").exception("MikroTik provisioning error after payment confirmation",
-                                                           extra={"tenant_id": tenant.id})
+            from notifications import send_payment_receipt
+            send_payment_receipt(tenant.name, tenant.phone, pending.amount, mpesa_code,
+                                 subscription.package.name if subscription.package else "Internet")
+        except Exception:
+            logging.getLogger("hotspot-billing").exception("SMS receipt failed", extra={"tenant_id": tenant.id})
     return pending
 
 

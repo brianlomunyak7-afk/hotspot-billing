@@ -3,13 +3,14 @@ import os
 from datetime import datetime
 
 import requests
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 import crud
 from database import get_db
-from models import PendingPayment, User
+from models import PendingPayment, Tenant, User
 from routes.auth import get_current_user, get_public_organization
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
@@ -101,5 +102,35 @@ def payment_status(checkout_request_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/all")
-def all_payments(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    return db.query(PendingPayment).filter(PendingPayment.organization_id == user.organization_id).order_by(PendingPayment.created_at.desc()).all()
+def all_payments(
+    search: str = Query(default="", max_length=100),
+    status_filter: str = Query(default="", max_length=20),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    q = (db.query(PendingPayment, Tenant.name)
+         .outerjoin(Tenant, Tenant.id == PendingPayment.tenant_id)
+         .filter(PendingPayment.organization_id == user.organization_id))
+    if search:
+        pattern = f"%{search}%"
+        q = q.filter(or_(Tenant.name.ilike(pattern), PendingPayment.mpesa_code.ilike(pattern)))
+    if status_filter:
+        q = q.filter(PendingPayment.status == status_filter)
+    total = q.count()
+    rows = q.order_by(PendingPayment.created_at.desc()).offset(offset).limit(limit).all()
+    items = []
+    for payment, tenant_name in rows:
+        items.append({
+            "id": payment.id,
+            "tenant_id": payment.tenant_id,
+            "tenant_name": tenant_name or "Unknown",
+            "checkout_request_id": payment.checkout_request_id,
+            "subscription_id": payment.subscription_id,
+            "amount": payment.amount,
+            "status": payment.status,
+            "mpesa_code": payment.mpesa_code,
+            "created_at": payment.created_at.isoformat() if payment.created_at else None,
+        })
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
