@@ -39,6 +39,8 @@ services:
     volumes:
       - ./frontend:/usr/share/nginx/html
       - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/portal/config.docker.js:/usr/share/nginx/html/portal/config.js:ro
+      - ./frontend/admin/config.docker.js:/usr/share/nginx/html/admin/config.js:ro
     depends_on:
       backend:
         condition: service_healthy
